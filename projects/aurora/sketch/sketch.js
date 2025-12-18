@@ -66,10 +66,16 @@ function drawCurtain(z, wind, activity) {
   
         // Height-based colour (cyan higher up, greener lower down)
         const col = auroraColour(z, y01, activity);
-        stroke(col[0], col[1], col[2], 40);
-        // const v = 1 - y01;                     // 1 at top → 0 at bottom
-        // const fade = Math.pow(Math.max(0, v), 1.4);
-        // stroke(col[0], col[1], col[2], 40 * fade);
+        // stable 
+        // stroke(col[0], col[1], col[2], 40);
+        // Allows fade
+        const v = 1 - y01;                           // 1 at top → 0 at bottom
+        const vv = Math.max(0, Math.min(1, v));      // clamp 0..1
+        const fade = Math.pow(vv, 1.4);              // curve
+        const a = 40 * (0.15 + 0.85 * fade);         // NEVER goes to 0
+        stroke(col[0], col[1], col[2], a);
+
+
 
   
         if (prevX !== null) {
