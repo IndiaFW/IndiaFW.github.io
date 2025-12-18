@@ -17,7 +17,7 @@ function draw() {
   // slow fade for trails
   background(7, 10, 18, 40);
 
-  t += 0.004;
+  t += 0.002;
 
   const wind = map(mouseX, 0, width, -1, 1);
   const activity = 0.5 + 0.5 * noise(t * 0.6);
@@ -30,35 +30,51 @@ function draw() {
 }
 
 function drawCurtain(z, wind, activity) {
-  const baseY = height * (0.15 + 0.08 * z);
-  const ampX = width * (0.15 + 0.1 * (1 - z));
-  const ampY = height * (0.2 + 0.15 * (1 - z));
-
-  strokeWeight(1.2 + 2.5 * (1 - z));
-
-  const col = auroraColour(z, activity);
-  stroke(col[0], col[1], col[2], 40);
-
-  const cols = 80;
-  for (let i = 0; i < cols; i++) {
-    beginShape();
-    for (let y = 0; y < height; y += 14) {
-      const n = noise(i * 0.06, y * 0.01, t * 1.2 + z * 3);
-      const x =
-        (i / cols) * width +
-        (n - 0.5) * ampX +
-        wind * 120 * (1 - y / height);
-
-      const yy =
-        baseY +
-        y +
-        sin(t * 2 + i * 0.15 + y * 0.01) * ampY * 0.1;
-
-      curveVertex(x, yy);
+    const baseY = height * (0.15 + 0.08 * z);
+    const ampX = width * (0.12 + 0.08 * (1 - z));
+    const ampY = height * (0.16 + 0.12 * (1 - z));
+  
+    const glowPasses = 5; // number of glow layers
+  
+    for (let g = 0; g < glowPasses; g++) {
+      const glowStrength = 1 - g / glowPasses;
+      const alpha = 22 * glowStrength;
+      const weight = (1.2 + 2.2 * (1 - z)) * (1 + g * 0.6);
+  
+      strokeWeight(weight);
+  
+      const col = auroraColour(z, activity);
+      stroke(col[0], col[1], col[2], alpha);
+  
+      const cols = 70;
+      for (let i = 0; i < cols; i++) {
+        beginShape();
+        for (let y = 0; y < height; y += 16) {
+          const n = noise(
+            i * 0.05 + g * 10,
+            y * 0.008,
+            t * 0.8 + z * 3
+          );
+  
+          const x =
+            (i / cols) * width +
+            (n - 0.5) * ampX +
+            wind * 80 * (1 - y / height);
+  
+          const yy =
+            baseY +
+            y +
+            sin(t * 1.6 + i * 0.12 + y * 0.01) *
+              ampY *
+              0.08;
+  
+          curveVertex(x, yy);
+        }
+        endShape();
+      }
     }
-    endShape();
   }
-}
+  
 
 function auroraColour(z, activity) {
   // green → cyan aurora palette
