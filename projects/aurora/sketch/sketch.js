@@ -41,8 +41,8 @@ function drawCurtain(z, wind) {
   const glowPasses = 2;
 
   for (let g = 0; g < glowPasses; g++) {
-    const alpha = 26 * (1 - g / glowPasses);
-    strokeWeight(1.2 + 1.8 * (1 - z));
+    const alpha = 12 * (1 - g / glowPasses);
+    strokeWeight(0.6 + 1.8 * (1 - z));
 
     const col = auroraColour(z);
     stroke(col[0], col[1], col[2], alpha);
