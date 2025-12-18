@@ -38,13 +38,14 @@ function drawCurtain(z, wind, activity) {
   
     for (let g = 0; g < glowPasses; g++) {
       const glowStrength = 1 - g / glowPasses;
-      const alpha = 22 * glowStrength;
-      const weight = (1.2 + 2.2 * (1 - z)) * (1 + g * 0.6);
-  
+      const alpha = (28 + 18 * (1 - z)) * glowStrength;   // brighter foreground
+      const weight = (1.0 + 2.6 * (1 - z)) * (1 + g * 0.75);
+      
+      
       strokeWeight(weight);
   
       const col = auroraColour(z, activity);
-      stroke(col[0], col[1], col[2], alpha);
+    //   stroke(col[0], col[1], col[2], alpha);
   
       const cols = 70;
       for (let i = 0; i < cols; i++) {
@@ -68,6 +69,10 @@ function drawCurtain(z, wind, activity) {
               ampY *
               0.08;
   
+          const v = 1 - y / height;              // 1 at top, 0 at bottom
+          const fade = pow(constrain(v, 0, 1), 1.6); // curve the fade
+          stroke(col[0], col[1], col[2], alpha * fade);
+
           curveVertex(x, yy);
         }
         endShape();
