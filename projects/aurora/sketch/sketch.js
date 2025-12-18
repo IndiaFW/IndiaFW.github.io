@@ -30,57 +30,68 @@ function draw() {
 }
 
 function drawCurtain(z, wind, activity) {
-  const baseY = height * (0.15 + 0.08 * z);
-  const ampX = width * (0.15 + 0.1 * (1 - z));
-  const ampY = height * (0.2 + 0.15 * (1 - z));
-
-  strokeWeight(1.2 + 2.5 * (1 - z));
-// stable v0
-//   const col = auroraColour(z, activity);
-//   stroke(col[0], col[1], col[2], 40);
-
-  const cols = 80;
-  for (let i = 0; i < cols; i++) {
-    beginShape();
-    for (let y = 0; y < height; y += 14) {
-      const n = noise(i * 0.06, y * 0.01, t * 1.2 + z * 3);
-
-      const x =
-        (i / cols) * width +
-        (n - 0.5) * ampX +
-        wind * 120 * (1 - y / height);
-
-      const yy =
-        baseY +
-        y +
-        sin(t * 2 + i * 0.15 + y * 0.01) *
-          ampY *
-          0.1 *
-          (0.7 + 0.3 * activity);
-
-        const y01 = y / height;
-        const col = auroraColour(z, y01);
-        stroke(col[0], col[1], col[2], 40);
-          
-      curveVertex(x, yy);
-    }
-    endShape();
-  }
-}
-
-function auroraColour(z, y01) {
-    // y01 = y / height (0 at top, 1 at bottom)
+    const baseY = height * (0.15 + 0.08 * z);
+    const ampX = width * (0.15 + 0.1 * (1 - z));
+    const ampY = height * (0.2 + 0.15 * (1 - z));
   
+    // strokeWeight(1.2 + 2.5 * (1 - z));
+    strokeWeight(0.9 + 1.8 * (1 - z));
+  
+    const cols = 80;
+    const stepY = 6;
+  
+    for (let i = 0; i < cols; i++) {
+      let prevX = null;
+      let prevY = null;
+  
+      for (let y = 0; y < height; y += stepY) {
+        const y01 = y / height;
+  
+        const n = noise(i * 0.06, y * 0.01, t * 1.2 + z * 3);
+  
+        const x =
+          (i / cols) * width +
+          (n - 0.5) * ampX +
+          wind * 120 * (1 - y01);
+  
+        const yy =
+          baseY +
+          y +
+          sin(t * 2 + i * 0.15 + y * 0.01) *
+            ampY *
+            0.1 *
+            (0.7 + 0.3 * activity);
+  
+        // Height-based colour (cyan higher up, greener lower down)
+        const col = auroraColour(z, y01, activity);
+        stroke(col[0], col[1], col[2], 40);
+  
+        if (prevX !== null) {
+          line(prevX, prevY, x, yy);
+        }
+  
+        prevX = x;
+        prevY = yy;
+      }
+    }
+  }
+
+  function auroraColour(z, y01, activity) {
     const c1 = [90, 255, 140]; // green
     const c2 = [60, 220, 255]; // cyan
   
-    // Base colour from depth
-    const depthMix = 0.25 + 0.6 * z;
+    // Depth influence (subtle)
+    const depthMix = 0.2 + 0.55 * z;
   
-    // Height influence: more cyan near the top
-    const heightMix = 0.35 * (1 - y01);
+    // Height influence (stronger): top more cyan
+    // const heightMix = 0.45 * (1 - y01);
+    const heightMix = 0.55 * Math.pow(1 - y01, 1.6);
+
   
-    const u = constrain(depthMix + heightMix, 0, 1);
+    // Activity influence (tiny)
+    const actMix = 0.1 * activity;
+  
+    const u = constrain(depthMix + heightMix + actMix, 0, 1);
   
     return [
       lerp(c1[0], c2[0], u),
