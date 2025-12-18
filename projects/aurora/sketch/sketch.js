@@ -1,6 +1,8 @@
 // Aurora Borealis — v0 visual prototype
 // Noise-driven flowing curtains
 
+// '''SERVER: python3 -m http.server 8000'''
+
 let t = 0;
 
 function setup() {
@@ -38,7 +40,7 @@ function drawCurtain(z, wind, activity) {
     strokeWeight(0.9 + 1.8 * (1 - z));
   
     const cols = 80;
-    const stepY = 6;
+    const stepY = 8;
   
     for (let i = 0; i < cols; i++) {
       let prevX = null;
@@ -65,6 +67,10 @@ function drawCurtain(z, wind, activity) {
         // Height-based colour (cyan higher up, greener lower down)
         const col = auroraColour(z, y01, activity);
         stroke(col[0], col[1], col[2], 40);
+        // const v = 1 - y01;                     // 1 at top → 0 at bottom
+        // const fade = Math.pow(Math.max(0, v), 1.4);
+        // stroke(col[0], col[1], col[2], 40 * fade);
+
   
         if (prevX !== null) {
           line(prevX, prevY, x, yy);
