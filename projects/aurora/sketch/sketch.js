@@ -35,9 +35,9 @@ function drawCurtain(z, wind, activity) {
   const ampY = height * (0.2 + 0.15 * (1 - z));
 
   strokeWeight(1.2 + 2.5 * (1 - z));
-
-  const col = auroraColour(z, activity);
-  stroke(col[0], col[1], col[2], 40);
+// stable v0
+//   const col = auroraColour(z, activity);
+//   stroke(col[0], col[1], col[2], 40);
 
   const cols = 80;
   for (let i = 0; i < cols; i++) {
@@ -58,6 +58,10 @@ function drawCurtain(z, wind, activity) {
           0.1 *
           (0.7 + 0.3 * activity);
 
+        const y01 = y / height;
+        const col = auroraColour(z, y01);
+        stroke(col[0], col[1], col[2], 40);
+          
       curveVertex(x, yy);
     }
     endShape();
