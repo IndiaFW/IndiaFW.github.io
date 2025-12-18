@@ -64,14 +64,37 @@ function drawCurtain(z, wind, activity) {
   }
 }
 
-function auroraColour(z, activity) {
-  // classic green → cyan
-  const c1 = [90, 255, 140];
-  const c2 = [60, 220, 255];
-  const u = constrain(0.2 + 0.65 * z + 0.1 * activity, 0, 1);
-  return [
-    lerp(c1[0], c2[0], u),
-    lerp(c1[1], c2[1], u),
-    lerp(c1[2], c2[2], u),
-  ];
-}
+function auroraColour(z, y01) {
+    // y01 = y / height (0 at top, 1 at bottom)
+  
+    const c1 = [90, 255, 140]; // green
+    const c2 = [60, 220, 255]; // cyan
+  
+    // Base colour from depth
+    const depthMix = 0.25 + 0.6 * z;
+  
+    // Height influence: more cyan near the top
+    const heightMix = 0.35 * (1 - y01);
+  
+    const u = constrain(depthMix + heightMix, 0, 1);
+  
+    return [
+      lerp(c1[0], c2[0], u),
+      lerp(c1[1], c2[1], u),
+      lerp(c1[2], c2[2], u),
+    ];
+  }
+  
+
+// Aurora colour, stable v0
+// function auroraColour(z, activity) {
+//   // classic green → cyan
+//   const c1 = [90, 255, 140];
+//   const c2 = [60, 220, 255];
+//   const u = constrain(0.2 + 0.65 * z + 0.1 * activity, 0, 1);
+//   return [
+//     lerp(c1[0], c2[0], u),
+//     lerp(c1[1], c2[1], u),
+//     lerp(c1[2], c2[2], u),
+//   ];
+// }
