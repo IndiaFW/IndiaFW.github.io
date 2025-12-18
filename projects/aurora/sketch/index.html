@@ -22,6 +22,7 @@
       border-radius: 14px;
       padding: 10px 14px;
       font-size: 0.95rem;
+      z-index: 10;
     }
     a {
       color: #E9EEFF;
@@ -34,11 +35,12 @@
 
   <div class="ui">
     <a href="../">← back</a><br>
-    Move mouse • Aurora sketch v0
+    Move mouse • Aurora sketch v0<br>
     <span style="opacity:0.7">Generative, noise-driven prototype</span>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
-  <script src="sketch.js"></script>
+  <!-- cache buster while you're iterating -->
+  <script src="sketch.js?v=3"></script>
 </body>
 </html>
