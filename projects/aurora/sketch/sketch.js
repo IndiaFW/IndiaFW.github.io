@@ -2,14 +2,13 @@
 // Aurora Borealis — v0 visual prototype
 // ==============================
 // Core idea:
-//  Draws layered aurora-like curtains using noise-driven vertcal ribbons
-//      that drift and shimmer over time
-//  Layers are parametrised to give a sense of depth, motion and transparency
+//  Draws layered aurora-like curtains using noise-driven vertical ribbons
+//      that drift and shimmer over time.
+//  Layers are parametrised to give a sense of depth, motion and transparency.
 
 // =============================
 // SERVER: python3 -m http.server 8000
 // =============================
-
 
 let t = 0;
 
@@ -17,7 +16,7 @@ let t = 0;
 let cnv;
 
 let FPS = 5;      // capture rate (not draw rate)
-let SECONDS = 5;   // capture duration
+let SECONDS = 5;  // capture duration
 let RECORDING = false;
 
 let zip;
@@ -26,7 +25,6 @@ let capturedFrames = 0;
 let targetFrames = 0;
 let nextCaptureMs = 0;
 let zipBlobReady = null;
- 
 
 function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
@@ -105,12 +103,8 @@ function keyPressed() {
     }
 }
 
-
-
-
 function setup() {
     cnv = createCanvas(windowWidth, windowHeight);
-
     pixelDensity(1);
     noFill();
 }
@@ -118,7 +112,6 @@ function setup() {
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
-
 
 function clamp01(x) {
     return Math.max(0, Math.min(1, x));
@@ -129,23 +122,26 @@ function smooth01(x) {
     return x * x * (3 - 2 * x);
 }
 
-
 function tri01(x) {
-    x = x - Math.floor(x); // fract
+    x = x - Math.floor(x); // fractional part
     return 1 - Math.abs(2 * x - 1);
 }
 
-
 function draw() {
+    // slow fade for trails
     background(7, 10, 18, 20);
+
     t += 0.004;
+
     const wind = map(mouseX, 0, width, -1, 1);
     const activity = 0.5 + 0.5 * noise(t * 0.6);
+
     const layers = 4;
     for (let L = 0; L < layers; L++) {
         const z = L / (layers - 1);
         drawCurtain(z, wind, activity);
     }
+
     // --- ZIP capture timing (runs during draw) ---
     if (RECORDING) {
         const intervalMs = 1000 / FPS;
@@ -176,12 +172,39 @@ function drawCurtain(z, wind, activity) {
 
     strokeWeight(0.9 + 1.8 * (1 - z));
 
+    // Your tuned parameters
     const cols = 150;
     const stepY = 10;
+
+    // Palette colours (constant for this curtain)
+    const green = [40, 255, 120];   // punchy neon green
+    const blue = [0, 170, 255];     // deeper electric blue/cyan
+    const lilac = [235, 80, 255];   // light magenta / purple
+
+    // Band settings
+    const bandSize = Math.max(6, Math.round(cols / 10)); // derives a band width
+    const maxLilac = 0.50;
 
     for (let i = 0; i < cols; i++) {
         let prevX = null;
         let prevY = null;
+
+        // Band coordinate depends only on i (not y)
+        const bandPos = i / bandSize;                  // increases by 1 each band
+        const bandFrac = bandPos - Math.floor(bandPos); // 0..1 within band
+
+        // Alternate between 2-colour and 3-colour mode every band
+        const alt = 0.5 + 0.5 * Math.sin(Math.PI * bandPos);
+        const modeBlend = smooth01(alt);
+
+        // Lilac amount within a 3-colour band: 0 -> max -> 0 (peaks in band centre)
+        const lilacRamp = tri01(bandFrac);
+
+        // Final lilac weight: only present when modeBlend~1, and ramps within that band
+        const wL = maxLilac * modeBlend * lilacRamp;
+
+        // Remaining weight shared by green + blue
+        const wGB = 1 - wL;
 
         for (let y = 0; y < height; y += stepY) {
             const y01 = y / height;
@@ -201,55 +224,23 @@ function drawCurtain(z, wind, activity) {
                 0.1 *
                 (0.7 + 0.3 * activity);
 
-            // --- palette colours more vibrant
-            const green = [40, 255, 120];   // punchy neon green
-            const blue = [0, 170, 255];    // deeper electric blue/cyan
-            const lilac = [235, 80, 255];   // light magenta / purple
-
-            // --- choose band size ~ 10 "bins" worth of ribbons
-            const bandSize = Math.max(6, Math.round(cols / 10)); // keep  cols; just derives a band width
-
-            // --- band coordinate
-            const bandPos = i / bandSize;          // increases by 1 each band
-            const bandFrac = bandPos - Math.floor(bandPos); // 0..1 within band
-
-            // --- smoothly alternate between 2-colour and 3-colour mode every band
-            // modeBlend ~ 0 => 2-colour band, modeBlend ~ 1 => 3-colour band, smooth between them
-            const alt = 0.5 + 0.5 * Math.sin(Math.PI * bandPos);   // flips sign each band
-            const modeBlend = smooth01(alt);
-
-            // --- lilac amount within a 3-colour band: 0 -> max -> 0
-            const lilacRamp = tri01(bandFrac);
-
-            // Set the maximum lilac share here (0.33 matches "33% each" idea)
-            const maxLilac = 0.50;
-
-            // Final lilac weight: only present when modeBlend~1, and ramps within that band
-            const wL = maxLilac * modeBlend * lilacRamp;
-
-            // Remaining weight split between green and blue.
-            // (This matches examples: green and blue equal when lilac is present.)
-            const wGB = 1 - wL;
+            // Split remaining weight equally, then apply subtle vertical blue bias (top more blue)
             let wG = 0.5 * wGB;
             let wB = 0.5 * wGB;
 
-            // OPTIONAL: keep  existing vertical bias (top more blue) very subtly:
             const topBias = 0.18 * (1 - y01); // 0..0.18
             wB = clamp01(wB + topBias);
             wG = clamp01(wGB - wB);
 
-            // Mix colours
-            let col = [
+            const col = [
                 green[0] * wG + blue[0] * wB + lilac[0] * wL,
                 green[1] * wG + blue[1] * wB + lilac[1] * wL,
                 green[2] * wG + blue[2] * wB + lilac[2] * wL,
             ];
 
-            // // Allows fade
-            const v = 1 - y01;                           // 1 at top → 0 at bottom
-            const vv = Math.max(0, Math.min(1, v));      // clamp 0..1
-            const fade = Math.pow(vv, 1.4);              // curve
-            const a = 40 * (0.15 + 0.85 * fade);         // NEVER goes to 0
+            // Height-based alpha fade (never fully zero)
+            const fade = Math.pow(clamp01(1 - y01), 1.4);
+            const a = 40 * (0.15 + 0.85 * fade);
             stroke(col[0], col[1], col[2], a);
 
             if (prevX !== null) {
