@@ -133,9 +133,13 @@ function draw() {
 
     t += 0.004;
 
-    // Keep your original mapping (global breeze still responds to cursor x).
-    // If you later want the local interaction to dominate, change to -0.4..0.4.
-    const wind = map(mouseX, 0, width, -1, 1);
+    // Keep  original mapping (global breeze still responds to cursor x).
+    // If I later want the local interaction to dominate, change to -0.4..0.4.
+    // const wind = map(mouseX, 0, width, -1, 1);
+    // FREEZE MOTION
+    // const wind =0;
+    //Make global wind autonomous, no cursor, still gentle:
+    const wind = map(noise(t * 0.2), 0, 1, -0.4, 0.4);
 
     const activity = 0.5 + 0.5 * noise(t * 0.6);
 
@@ -189,10 +193,10 @@ function drawCurtain(z, wind, activity) {
     const maxLilac = 0.50;
 
     // Cursor interaction tuning knobs
-    const R = 260;          // radius of influence (px)
-    const PUSH_X = 220;     // sideways push strength (px-ish)
-    const LIFT_Y = 140;     // upward lift strength (px-ish)
-    const GLOW = 0.6;       // alpha boost near cursor (0..~1)
+    const R = 150;          // radius of influence (px)
+    const PUSH_X = 200;     // sideways push strength (px-ish)
+    const LIFT_Y = 200;     // upward lift strength (px-ish)
+    const GLOW = 10;       // alpha boost near cursor (0..~1)
 
     for (let i = 0; i < cols; i++) {
         let prevX = null;
@@ -224,7 +228,13 @@ function drawCurtain(z, wind, activity) {
 
             // Influence strength 0..1 (1 near cursor, 0 far away)
             const influence = clamp01(1 - d / R);
-            const touch = smooth01(influence); // soften the falloff
+            // const touch = smooth01(influence); // soften the falloff
+            // Softer, more diffuse
+            // const touch = influence * influence;
+            // Sharper, more aggressive
+            const touch = Math.pow(influence, 0.5);
+
+
 
             // Local sideways push: ribbons near the cursor are pushed away
             const localPushX = (dx / (d + 1)) * PUSH_X * touch;
