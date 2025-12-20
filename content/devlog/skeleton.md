@@ -1,7 +1,8 @@
 ---
-date: dd-mm-yyyy
+#Date: Use english wording
 title: Devlog Day X — Short descriptive title
 summary: One sentence on what changed or what today was about.
+
 ---
 
 ## Introduction (optional)
