@@ -133,7 +133,10 @@ function draw() {
 
     t += 0.004;
 
+    // Keep your original mapping (global breeze still responds to cursor x).
+    // If you later want the local interaction to dominate, change to -0.4..0.4.
     const wind = map(mouseX, 0, width, -1, 1);
+
     const activity = 0.5 + 0.5 * noise(t * 0.6);
 
     const layers = 4;
@@ -185,12 +188,20 @@ function drawCurtain(z, wind, activity) {
     const bandSize = Math.max(6, Math.round(cols / 10)); // derives a band width
     const maxLilac = 0.50;
 
+    // Cursor interaction tuning knobs
+    const R = 260;          // radius of influence (px)
+    const PUSH_X = 220;     // sideways push strength (px-ish)
+    const LIFT_Y = 140;     // upward lift strength (px-ish)
+    const GLOW = 0.6;       // alpha boost near cursor (0..~1)
+
     for (let i = 0; i < cols; i++) {
         let prevX = null;
         let prevY = null;
 
+        const baseX = (i / cols) * width;
+
         // Band coordinate depends only on i (not y)
-        const bandPos = i / bandSize;                  // increases by 1 each band
+        const bandPos = i / bandSize;                   // increases by 1 each band
         const bandFrac = bandPos - Math.floor(bandPos); // 0..1 within band
 
         // Alternate between 2-colour and 3-colour mode every band
@@ -201,28 +212,49 @@ function drawCurtain(z, wind, activity) {
         const lilacRamp = tri01(bandFrac);
 
         // Final lilac weight: only present when modeBlend~1, and ramps within that band
-        const wL = maxLilac * modeBlend * lilacRamp;
-
-        // Remaining weight shared by green + blue
-        const wGB = 1 - wL;
+        const wL_base = maxLilac * modeBlend * lilacRamp;
 
         for (let y = 0; y < height; y += stepY) {
             const y01 = y / height;
 
+            // --- Cursor interaction (local force + local energy) ---
+            const dx = baseX - mouseX;
+            const dy = y - mouseY;
+            const d = Math.sqrt(dx * dx + dy * dy);
+
+            // Influence strength 0..1 (1 near cursor, 0 far away)
+            const influence = clamp01(1 - d / R);
+            const touch = smooth01(influence); // soften the falloff
+
+            // Local sideways push: ribbons near the cursor are pushed away
+            const localPushX = (dx / (d + 1)) * PUSH_X * touch;
+
+            // Local upward lift near cursor
+            const localLiftY = -LIFT_Y * touch;
+
+            // Geometry noise
             const n = noise(i * 0.06, y * 0.01, t * 1.2 + z * 3);
 
             const x =
-                (i / cols) * width +
+                baseX +
                 (n - 0.5) * ampX +
-                wind * 120 * (1 - y01);
+                wind * 120 * (1 - y01) +
+                localPushX;
 
             const yy =
                 baseY +
                 y +
+                localLiftY +
                 sin(t * 2 + i * 0.15 + y * 0.01) *
                 ampY *
                 0.1 *
                 (0.7 + 0.3 * activity);
+
+            // --- Colour logic (with optional local "energy" boost) ---
+
+            // Boost lilac locally near cursor (subtle energy injection)
+            const wL = clamp01(wL_base + 0.25 * touch);
+            const wGB = 1 - wL;
 
             // Split remaining weight equally, then apply subtle vertical blue bias (top more blue)
             let wG = 0.5 * wGB;
@@ -238,9 +270,10 @@ function drawCurtain(z, wind, activity) {
                 green[2] * wG + blue[2] * wB + lilac[2] * wL,
             ];
 
-            // Height-based alpha fade (never fully zero)
+            // Height-based alpha fade (never fully zero) + local glow near cursor
             const fade = Math.pow(clamp01(1 - y01), 1.4);
-            const a = 40 * (0.15 + 0.85 * fade);
+            const glow = GLOW * touch;
+            const a = 40 * (0.15 + 0.85 * fade) * (1 + glow);
             stroke(col[0], col[1], col[2], a);
 
             if (prevX !== null) {
