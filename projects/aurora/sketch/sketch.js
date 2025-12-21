@@ -194,7 +194,7 @@ function drawCurtain(z, wind, activity) {
 
     // Cursor interaction tuning knobs
     const R = 150;          // radius of influence (px)
-    const PUSH_X = 150;     // sideways push strength (px-ish)
+    const PUSH_X = 10;     // sideways push strength (px-ish)
     const LIFT_Y = 200;     // upward lift strength (px-ish)
     const GLOW = 10;       // alpha boost near cursor (0..~1)
 
