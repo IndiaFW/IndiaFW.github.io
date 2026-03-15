@@ -1023,8 +1023,8 @@ function drawCurtain(z, wind, activity) {
     strokeWeight(0.9 + 1.8 * (1 - z));
 
     // Geometry resolution
-    const cols = 150;
-    const stepY = 15;
+    const cols = 200;
+    const stepY = 18;
 
     // Palette
     const palette = PALETTES[auroraPalette];
