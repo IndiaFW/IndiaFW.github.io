@@ -15,7 +15,7 @@ let t = 0;
 // --- STAR FIELD ---
 let stars = [];
 let starClusters = [];
-const STAR_COUNT = 1000;
+const STAR_COUNT = 200;
 const CLUSTER_COUNT = 4;
 let starTime = 0;
 let shootingStars = [];
@@ -215,7 +215,13 @@ const PALETTES = {
         green: [0, 255, 80],     // emerald
         blue: [255, 80, 0],      // molten orange
         lilac: [0, 120, 255]     // deep sky blue
-    }
+    },
+
+    highContrast : {
+        green: [11, 21, 128],      // cobalt
+        blue: [120, 2, 28],       // crimson
+        lilac: [227, 194, 95]     //  pale yellos]
+    }   
 };
 
 // const PALETTES = {
@@ -520,6 +526,7 @@ function createControls() {
     paletteSelect.option("Gamma Flux", "gammaFlux");
     paletteSelect.option("Plasma Circuit", "plasmaCircuit");
     paletteSelect.option("Nebula Chaos", "nebulaChaos");
+    paletteSelect.option("High Contrast", "highContrast");
 
 
     paletteSelect.value(auroraPalette);
