@@ -18,6 +18,13 @@
       text-decoration: none;
       border-bottom: 1px solid rgba(233,238,255,0.3);
     }
+    .link-group {
+      margin: 20px 0;
+    }
+    .link-group a {
+      display: inline-block;
+      margin-right: 16px;
+    }
   </style>
 </head>
 <body>
@@ -25,26 +32,24 @@
 
   <h1>Aurora Borealis</h1>
 
-  <p>
-    → <a href="sketch/">Live visual prototype</a>
-  </p>  
+  <div class="link-group">
+    → <a href="sketch/">Classic aurora</a>
+    → <a href="sketch_magnetosphere/">Magnetosphere variant</a>
+  </div>
 
   <p>
-    An interactive, data-driven aurora artwork exploring space weather,
-    perception, and AI as an aesthetic mediator.
+    An interactive generative artwork exploring auroral dynamics through
+    layered noise fields, particle motion, and physically-inspired flow.
   </p>
 
   <p>
-    Status: <b>initial exploration</b>
+    The project currently exists in two forms: a classic aurora renderer and
+    an experimental magnetosphere variant with more vortex-driven motion and
+    local disturbances.
   </p>
 
   <p>
-    Next steps:
+    Status: <b>active development</b>
   </p>
-  <ul>
-    <li>Visual prototype (p5.js)</li>
-    <li>Mapping space-weather data → motion & colour</li>
-    <li>AI-based style modulation</li>
-  </ul>
 </body>
 </html>
