@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# video / screen recordings
+*.mp4
+*.mov
+*.m4v
+*.avi
+*.webm
+
+# gifs / exported captures
+*.gif
+*.zip
+
+# common image exports if you do not want them tracked
+*.png
+*.jpg
+*.jpeg
+
+# optional: local editor junk
+.vscode/

@@ -18,7 +18,7 @@ const CURTAIN_LAYERS = 3;
 const AURORA_BRIGHTNESS = 0.72;
 const CURTAIN_ALPHA = 26;
 const HIGHLIGHT_ALPHA = 52;
-const VEIL_ALPHA = 12;
+const VEIL_ALPHA = 1;
 
 // example palette
 const PALETTES = {
@@ -147,6 +147,7 @@ function drawVerticalAuroraStrip(x, yTop, thickness, cTop, cMid, cBottom, alphaB
         let mixAmt = 0.5 + 0.5 * sin(t * PI);
         let finalColour = lerpColourArray(colourA, colourB, mixAmt);
 
+        // let wobble = sin(starTime * 2.1 + y * 0.025 + x * 0.008) * 2.5;
         let wobble = sin(starTime * 2.1 + y * 0.025 + x * 0.008) * 2.5;
         let w = (7 + 10 * fadeTop) * widthScale;
 
