@@ -22,25 +22,128 @@
       border-radius: 14px;
       padding: 10px 14px;
       font-size: 0.95rem;
-      z-index: 10;
+      z-index: 100;
+      pointer-events: auto;
     }
-    a {
+    .ui a {
       color: #E9EEFF;
       text-decoration: none;
       border-bottom: 1px solid rgba(233,238,255,0.3);
+    }
+    .ui label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ui .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .ui select {
+      background: rgba(13,19,48,0.9);
+      color: #E9EEFF;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .ui select:focus {
+      outline: 1px solid rgba(255,255,255,0.4);
     }
   </style>
 </head>
 <body>
 
-  <div class="ui">
+  <div class="ui" id="controls">
     <a href="../">← back</a><br>
     Move mouse • Aurora sketch v0<br>
     <span style="opacity:0.7">Generative, noise-driven prototype</span>
+
+    <label>
+      <input type="checkbox" id="raysCheckbox" checked>
+      Fine vertical rays
+    </label>
+
+    <div class="row">
+      <span>Palette</span>
+      <select id="paletteSelect">
+        <option value="classic">Classic</option>
+        <option value="violetStorm">Violet Storm</option>
+        <option value="arcticBlue">Arctic Blue</option>
+        <option value="solarFlare">Solar Flare</option>
+        <option value="deepSpace">Deep Space</option>
+        <option value="emeraldStorm">Emerald Storm</option>
+        <option value="neonNebula">Neon Nebula</option>
+        <option value="arcticIce">Arctic Ice</option>
+        <option value="deepAurora">Deep Aurora</option>
+        <option value="dreamLavender">Dream Lavender</option>
+        <option value="cottonCandy">Cotton Candy</option>
+        <option value="synthwave">Synthwave</option>
+        <option value="ionStorm">Ion Storm</option>
+        <option value="plasmaArc">Plasma Arc</option>
+        <option value="alienSky">Alien Sky</option>
+        <option value="supernova">Supernova</option>
+        <option value="gammaBurst">Gamma Burst</option>
+        <option value="auroraUltra">Aurora Ultra</option>
+        <option value="toxicIon">Toxic Ion</option>
+        <option value="cosmicFire">Cosmic Fire</option>
+        <option value="prismaticShock">Prismatic Shock</option>
+        <option value="acidRainbow">Acid Rainbow</option>
+        <option value="ultravioletStorm">Ultraviolet Storm</option>
+        <option value="toxicSunset">Toxic Sunset</option>
+        <option value="alienPlasma">Alien Plasma</option>
+        <option value="laserStorm">Laser Storm</option>
+        <option value="cosmicCandy">Cosmic Candy</option>
+        <option value="gammaFlux">Gamma Flux</option>
+        <option value="plasmaCircuit">Plasma Circuit</option>
+        <option value="nebulaChaos">Nebula Chaos</option>
+        <option value="highContrast">High Contrast</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <span>Cursor</span>
+      <select id="interactionSelect">
+        <option value="off">Off</option>
+        <option value="pushLift">Push Lift</option>
+        <option value="magneticVortex" selected>Magnetic Vortex</option>
+        <option value="attractor">Attractor</option>
+        <option value="shockwave">Shockwave</option>
+        <option value="ignition">Ignition</option>
+      </select>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="sketch.js?v=1"></script>
+
+  <script>
+    // Wire up plain HTML controls to the sketch globals.
+    // Runs after sketch.js so the globals already exist.
+    window.addEventListener('DOMContentLoaded', () => {
+      const raysCheckbox    = document.getElementById('raysCheckbox');
+      const paletteSelect   = document.getElementById('paletteSelect');
+      const interactionSelect = document.getElementById('interactionSelect');
+
+      raysCheckbox.addEventListener('change', () => {
+        raysEnabled = raysCheckbox.checked;
+      });
+
+      paletteSelect.addEventListener('change', () => {
+        auroraPalette = paletteSelect.value;
+      });
+
+      interactionSelect.addEventListener('change', () => {
+        interactionMode = interactionSelect.value;
+      });
+    });
+  </script>
 </body>
 </html>
