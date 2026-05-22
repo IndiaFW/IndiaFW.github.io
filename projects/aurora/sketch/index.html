@@ -125,21 +125,22 @@
   <script src="sketch.js?v=1"></script>
 
   <script>
-    // Wire up plain HTML controls to the sketch globals.
-    // Runs after sketch.js so the globals already exist.
     window.addEventListener('DOMContentLoaded', () => {
-      const raysCheckbox    = document.getElementById('raysCheckbox');
-      const paletteSelect   = document.getElementById('paletteSelect');
+      const raysCheckbox      = document.getElementById('raysCheckbox');
+      const paletteSelect     = document.getElementById('paletteSelect');
       const interactionSelect = document.getElementById('interactionSelect');
+
+      // Stop p5 from swallowing events on the controls panel
+      const panel = document.getElementById('controls');
+      panel.addEventListener('mousedown', e => e.stopPropagation());
+      panel.addEventListener('click',     e => e.stopPropagation());
 
       raysCheckbox.addEventListener('change', () => {
         raysEnabled = raysCheckbox.checked;
       });
-
       paletteSelect.addEventListener('change', () => {
         auroraPalette = paletteSelect.value;
       });
-
       interactionSelect.addEventListener('change', () => {
         interactionMode = interactionSelect.value;
       });

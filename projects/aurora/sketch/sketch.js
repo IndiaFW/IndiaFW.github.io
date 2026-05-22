@@ -2,6 +2,11 @@
 // Aurora Borealis — v0 visual prototype
 // ==============================
 
+// =============================
+// SERVER: python3 -m http.server 8000
+// http://localhost:8000/
+// =============================
+
 let t = 0;
 
 // --- STAR FIELD ---
