@@ -322,10 +322,15 @@ function updatePointer() {
         pointerActive =
             mouseX >= 0 && mouseX <= width &&
             mouseY >= 0 && mouseY <= height;
+    // } else if (!pointerActive) {
+    //     // gentle fallback to centre on touch devices when not touching
+    //     pointerTargetX = width * 0.5;
+    //     pointerTargetY = height * 0.5;
+    // }
+
     } else if (!pointerActive) {
-        // gentle fallback to centre on touch devices when not touching
-        pointerTargetX = width * 0.5;
-        pointerTargetY = height * 0.5;
+            pointerTargetX = lerp(pointerTargetX, width * 0.5, 0.02);
+            pointerTargetY = lerp(pointerTargetY, height * 0.5, 0.02);
     }
 
     const ease = isMobileLayout ? 0.16 : 0.22;
@@ -437,6 +442,11 @@ function keyPressed() {
 
 function setup() {
     cnv = createCanvas(windowWidth, windowHeight);
+    // dropdowndebug
+    cnv.style("position", "fixed");
+    cnv.style("top", "0");
+    cnv.style("left", "0");
+    cnv.style("z-index", "0");   // push canvas behind everything
 
     detectDeviceProfile();
     pixelDensity(1);
