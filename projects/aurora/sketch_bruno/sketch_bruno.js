@@ -52,7 +52,7 @@ let auroraIntroMult = 1;
 // formed letters. Press "L" at any time to replay the sequence immediately.
 let letterMaskData = null;
 let letterSequenceStartMs = 0;
-const LETTER_WORD = "Bruno";
+const LETTER_WORD = "HB Bruno";
 const LETTER_START_DELAY = 5500;     // ms after load before letters start forming
 const LETTER_FORM_DURATION = 2600;   // ms to snap into the word
 const LETTER_HOLD_DURATION = 2200;   // ms to hold the fully-formed word

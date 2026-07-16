@@ -62,7 +62,7 @@
 
   <div class="ui" id="controls">
     <a href="../">← back</a><br>
-    Move mouse! • PRESS L TO REPLAY!<br>
+    Move mouse! • <span id="replayHint">PRESS L TO REPLAY!</span><br>
     <span style="opacity:0.7">Generative, BIRTHDAY, noise-driven prototype</span>
 
     <label>
@@ -129,6 +129,16 @@
       const raysCheckbox      = document.getElementById('raysCheckbox');
       const paletteSelect     = document.getElementById('paletteSelect');
       const interactionSelect = document.getElementById('interactionSelect');
+      const replayHint        = document.getElementById('replayHint');
+
+      // Same touch-detection logic used in sketch.js (isTouchDevice) — kept
+      // independent here since this runs before/alongside p5's setup().
+      const isTouch =
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia('(pointer: coarse)').matches;
+
+      replayHint.textContent = isTouch ? 'DOUBLE TAP TO REPLAY!' : 'PRESS L TO REPLAY!';
 
       // Stop p5 from swallowing events on the controls panel
       const panel = document.getElementById('controls');
