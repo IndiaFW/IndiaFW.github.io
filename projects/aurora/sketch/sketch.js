@@ -1,5 +1,6 @@
 // ==============================
 // Aurora Borealis — v0 visual prototype
+// (additive blending + rebalanced alpha)
 // ==============================
 
 // =============================
@@ -22,9 +23,14 @@ let MAX_SHOOTING_STARS = 2;
 let raysEnabled = true;
 let auroraKnots = [];
 let MAX_KNOTS = 4;
-const KNOT_SPAWN_CHANCE = 0.05;
+const KNOT_SPAWN_CHANCE = 0.1;
 let interactionMode = "magneticVortex";
-const AURORA_INTENSITY = 0.9;
+
+// --- AURORA ALPHA BALANCE (tuned for additive blend mode) ---
+const AURORA_INTENSITY = 2.5;      // overall brightness
+const BASE_ALPHA_SCALE = 9;         // per-line base alpha multiplier
+const GLOW_BOOST_SCALE = 4;         // cursor-proximity glow boost
+const COLLAPSE_ALPHA_SCALE = 1.5;   // periodic "collapse" pulse strength
 
 // --- MOBILE / DEVICE PROFILE ---
 let isTouchDevice = false;
@@ -465,9 +471,16 @@ function draw() {
     const wind = map(noise(t * 0.2), 0, 1, -0.4, 0.4);
     const activity = 0.5 + 0.5 * noise(t * 0.6);
 
+    // Additive blending for the aurora curtains only — gives the light a
+    // luminous, overlapping-glow quality instead of flat alpha mixing.
+    // Scoped with push()/pop() so it doesn't affect stars/background,
+    // which still rely on normal blending.
+    push();
+    blendMode(ADD);
     for (let L = 0; L < qualityProfile.layers; L++) {
         drawCurtain(L / (qualityProfile.layers - 1), wind, activity);
     }
+    pop();
 
     drawStars("front");
 
@@ -501,6 +514,11 @@ function drawCurtain(z, wind, activity) {
     const colourScaleX = 0.012, colourScaleY = 0.006;
     const colourTime = t * 0.35, colourRise = t * 5.6;
     const collapseAmount = 0.3 + 0.3 * Math.sin(t * 8.0 + z * 2.0);
+
+    // Normalize per-layer alpha so total additive brightness stays roughly
+    // constant regardless of how many layers are active (3 on mobile, 4 on
+    // desktop) — otherwise more layers just means more stacked light.
+    const layerNorm = 1 / qualityProfile.layers;
 
     for (let i = 0; i < cols; i++) {
         let prevX = null, prevY = null;
@@ -604,10 +622,13 @@ function drawCurtain(z, wind, activity) {
                 rayAlpha = 0.55 + 2.4 * rayColumn * Math.pow(1-y01,0.8) * rayTexture * (1.0+1.2*collapseAmount);
             }
 
-            const a = AURORA_INTENSITY * 22 *
+            // Rebalanced for additive blend mode: layer-normalized base term,
+            // reduced glow/collapse multipliers so overlapping layers and
+            // cursor interaction don't blow out to white.
+            const a = AURORA_INTENSITY * BASE_ALPHA_SCALE * layerNorm *
                 (0.12 + 0.85 * Math.pow(clamp01(1-y01), 1.4)) *
-                (1 + 10*touch + knotGlow + cursorGlowBoost) *
-                (1.0 + 1.6*collapseAmount) *
+                (1 + GLOW_BOOST_SCALE*touch + 0.6*knotGlow + 0.6*cursorGlowBoost) *
+                (1.0 + COLLAPSE_ALPHA_SCALE*collapseAmount) *
                 rayAlpha;
 
             stroke(col[0], col[1], col[2], a);
