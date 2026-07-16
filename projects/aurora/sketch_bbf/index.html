@@ -95,10 +95,11 @@
       left: 240px; /* approx panel width — sits just past its right edge */
     }
 
-    /* Pre-content message — mobile only, shown briefly on a still-dark
-       screen before stars/aurora appear, then fades and stays out of the
-       way (pointer-events: none) so it never blocks the double-tap gesture
-       it's describing. */
+    /* Pre-content message — shown briefly on a still-dark screen before
+       stars/aurora appear, then fades and stays out of the way
+       (pointer-events: none) so it never blocks the gesture/key it's
+       describing. Two icon variants live side by side; body.is-touch
+       (set by JS below) decides which one is actually shown. */
     .pre-message {
       position: fixed;
       top: 50%;
@@ -119,11 +120,15 @@
 
     /* Two expanding rings, offset in time, mimicking two taps landing in
        the same spot — a small visual echo of the gesture itself rather
-       than just describing it in words. */
+       than just describing it in words. Touch devices only. */
     .tap-icon {
+      display: none;
       position: relative;
       width: 44px;
       height: 44px;
+    }
+    body.is-touch .tap-icon {
+      display: block;
     }
     .tap-icon .ring {
       position: absolute;
@@ -150,6 +155,34 @@
       0%   { transform: scale(0.35); opacity: 0.9; }
       70%  { opacity: 0.15; }
       100% { transform: scale(1.2); opacity: 0; }
+    }
+
+    /* Glowing "L" keycap — desktop only, mirrors the tap-icon's role of
+       giving the gesture a visual presence rather than just naming it. */
+    .key-icon {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(150,220,255,0.55);
+      background: rgba(13,19,48,0.4);
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: rgba(212,236,255,0.92);
+      animation: keyGlow 3.4s ease-in-out infinite, keyPress 2.6s ease-in-out infinite;
+    }
+    body:not(.is-touch) .key-icon {
+      display: flex;
+    }
+    @keyframes keyGlow {
+      0%, 100% { box-shadow: 0 0 8px rgba(120,200,255,0.18) inset, 0 0 8px rgba(120,200,255,0.18); }
+      50%      { box-shadow: 0 0 16px rgba(150,210,255,0.4) inset, 0 0 16px rgba(150,210,255,0.4); }
+    }
+    @keyframes keyPress {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(2px); }
     }
 
     .tap-text {
@@ -257,7 +290,8 @@
       <span class="ring ring2"></span>
       <span class="dot"></span>
     </div>
-    <div class="tap-text">Double tap to replay the message</div>
+    <div class="key-icon">L</div>
+    <div class="tap-text" id="preMessageText">Double tap to replay the message</div>
   </div>
 
   <div class="visitor-counter no-canvas-capture" id="visitorCounter">
@@ -346,6 +380,7 @@
       const wrapper           = document.getElementById('controlsWrapper');
       const toggle            = document.getElementById('uiToggle');
       const preMessage        = document.getElementById('preMessage');
+      const preMessageText    = document.getElementById('preMessageText');
       const visitorCount      = document.getElementById('visitorCount');
       const immersiveToggle   = document.getElementById('immersiveToggle');
 
@@ -371,16 +406,19 @@
           toggle.textContent = nowOpen ? '✕' : '☰';
         });
 
-        // --- Pre-content message (mobile only) ---
-        // Shown briefly on the still-dark screen before the intro's stars
-        // and aurora fade in, so first-time visitors know the double-tap
-        // gesture exists before they'd otherwise have any reason to try it.
-        requestAnimationFrame(() => preMessage.classList.add('visible'));
-        setTimeout(() => preMessage.classList.remove('visible'), 2400);
+        preMessageText.textContent = 'Double tap to replay the message';
       } else {
-        // Desktop never shows the touch-only pre-message.
-        preMessage.remove();
+        preMessageText.textContent = 'Press L to replay the message';
       }
+
+      // --- Pre-content message ---
+      // Shown briefly on the still-dark screen before the intro's stars
+      // and aurora fade in, so first-time visitors know the replay
+      // gesture/key exists before they'd otherwise have any reason to try
+      // it. Which icon shows (tap rings vs. glowing "L" key) is decided
+      // purely by CSS off the body.is-touch class set above.
+      requestAnimationFrame(() => preMessage.classList.add('visible'));
+      setTimeout(() => preMessage.classList.remove('visible'), 4000);
 
       // --- Visitor counter ---
       // Uses CountAPI (api.countapi.xyz), a free public hit-counter with no
