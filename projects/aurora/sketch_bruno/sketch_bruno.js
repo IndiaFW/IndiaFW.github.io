@@ -4,8 +4,8 @@
 // ==============================
 
 // =============================
-// SERVER: python3 -m http.server 9000
-// http://localhost:9000/
+// SERVER: python3 -m http.server 8000
+// http://localhost:8000/
 // =============================
 
 let t = 0;
@@ -52,12 +52,17 @@ let auroraIntroMult = 1;
 // formed letters. Press "L" at any time to replay the sequence immediately.
 let letterMaskData = null;
 let letterSequenceStartMs = 0;
-const LETTER_WORD = "HB Bruno";
+const LETTER_WORD = "Bruno";
 const LETTER_START_DELAY = 5500;     // ms after load before letters start forming
 const LETTER_FORM_DURATION = 2600;   // ms to snap into the word
 const LETTER_HOLD_DURATION = 2200;   // ms to hold the fully-formed word
 const LETTER_DISSOLVE_DURATION = 3000; // ms to release back into normal flow
 let letterFormMix = 0;
+
+// Double-tap on touch devices replays the letter sequence, mirroring the
+// "L" key on desktop (keyPressed never fires on touch-only devices).
+let lastTapMs = 0;
+const DOUBLE_TAP_WINDOW_MS = 400;
 
 // --- MOBILE / DEVICE PROFILE ---
 let isTouchDevice = false;
@@ -191,6 +196,14 @@ function touchStarted() {
         pointerTargetX = touches[0].x;
         pointerTargetY = touches[0].y;
         pointerActive = true;
+
+        const now = millis();
+        if (now - lastTapMs < DOUBLE_TAP_WINDOW_MS) {
+            letterSequenceStartMs = now; // double-tap replays the "Bruno" formation
+            lastTapMs = 0; // avoid a fast third tap immediately re-triggering
+        } else {
+            lastTapMs = now;
+        }
     }
     return false;
 }
@@ -526,8 +539,26 @@ function buildLetterMask(word) {
     pg.textAlign(CENTER, CENTER);
     pg.textStyle(BOLD);
     pg.textFont('sans-serif');
-    pg.textSize(height * 0.28);
-    pg.text(word, width * 0.5, height * 0.38);
+
+    // Size relative to the smaller dimension. On desktop (wide, short)
+    // that's height, which is what we had before. On mobile portrait
+    // (narrow, tall), sizing off height alone would make the word render
+    // far wider than the screen — so on mobile we size off width instead.
+    const sizeBasis = isMobileLayout ? width : height;
+    let textSizePx = sizeBasis * (isMobileLayout ? 0.16 : 0.28);
+    pg.textSize(textSizePx);
+
+    // Auto-fit safety net: if the word still overflows the canvas width at
+    // this size (can happen on very narrow phones even after the basis fix
+    // above), scale down further until it fits with a small margin.
+    const measuredWidth = pg.textWidth(word);
+    const maxWidth = width * 0.88;
+    if (measuredWidth > maxWidth) {
+        textSizePx *= maxWidth / measuredWidth;
+        pg.textSize(textSizePx);
+    }
+
+    pg.text(word, width * 0.5, height * (isMobileLayout ? 0.34 : 0.38));
     pg.loadPixels();
 
     const mask = [];
