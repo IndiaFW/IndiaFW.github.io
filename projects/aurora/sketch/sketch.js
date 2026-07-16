@@ -29,7 +29,7 @@ let interactionMode = "magneticVortex";
 // --- AURORA ALPHA BALANCE (tuned for additive blend mode) ---
 const AURORA_INTENSITY = 2.5;      // overall brightness
 const BASE_ALPHA_SCALE = 9;         // per-line base alpha multiplier
-const GLOW_BOOST_SCALE = 3.5;         // cursor-proximity glow boost
+const GLOW_BOOST_SCALE = 4;         // cursor-proximity glow boost
 const COLLAPSE_ALPHA_SCALE = 1.5;   // periodic "collapse" pulse strength
 
 // --- MOBILE / DEVICE PROFILE ---
@@ -585,11 +585,20 @@ function drawCurtain(z, wind, activity) {
             const patchMask = Math.pow(noise(baseX * 0.01, y * 0.012, t * 0.9 + z * 20.0), 3.0);
             const foldStrength = collapseAmount * collapseHeightMask * (0.25 + 0.45 * bunch + 0.65 * patchMask);
 
+            // Coherent traveling wave: unlike the noise fields above (which
+            // are organic but directionless), this sin term has an x-minus-t
+            // phase, so it visibly propagates sideways through the curtain
+            // over time rather than just wobbling in place. Layered in at a
+            // modest weight under the existing noise detail — it's a subtle
+            // "current" pulling the whole curtain rather than a dominant motion.
+            const travelWave = Math.sin(baseX * 0.006 - t * 10.0 + z * 2.0);
+
             const x = baseX +
                 (n - 0.5) * ampX +
                 wind * 120 * (1 - y01) +
                 localPushX +
                 foldStrength * 180 * combinedWave +
+                travelWave * 6 * (1 - y01 * 0.4) +
                 (noise(i * 0.4, y * 0.05, t * 2.0) - 0.5) * 6;
 
             const yy = baseY + y + localLiftY + knotLift +
