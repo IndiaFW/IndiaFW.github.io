@@ -52,7 +52,7 @@ let auroraIntroMult = 1;
 // formed letters. Press "L" at any time to replay the sequence immediately.
 let letterMaskData = null;
 let letterSequenceStartMs = 0;
-const LETTER_WORD = "HB Bruno";
+const LETTER_WORD = "HB Bruno!";
 const LETTER_START_DELAY = 5500;     // ms after load before letters start forming
 const LETTER_FORM_DURATION = 2600;   // ms to snap into the word
 const LETTER_HOLD_DURATION = 2200;   // ms to hold the fully-formed word
@@ -191,7 +191,15 @@ function updatePointer() {
     pointerY = lerp(pointerY, pointerTargetY, ease);
 }
 
-function touchStarted() {
+function touchStarted(event) {
+    // Let taps on the controls panel (palette/interaction dropdowns, rays
+    // checkbox) behave like normal page UI — don't hijack them as canvas
+    // pointer input, and don't preventDefault, or mobile browsers won't
+    // open the native <select> dropdown.
+    if (event && event.target && event.target.closest && event.target.closest('#controls')) {
+        return;
+    }
+
     if (touches.length > 0) {
         pointerTargetX = touches[0].x;
         pointerTargetY = touches[0].y;
@@ -208,7 +216,11 @@ function touchStarted() {
     return false;
 }
 
-function touchMoved() {
+function touchMoved(event) {
+    if (event && event.target && event.target.closest && event.target.closest('#controls')) {
+        return;
+    }
+
     if (touches.length > 0) {
         pointerTargetX = touches[0].x;
         pointerTargetY = touches[0].y;
@@ -217,7 +229,11 @@ function touchMoved() {
     return false;
 }
 
-function touchEnded() {
+function touchEnded(event) {
+    if (event && event.target && event.target.closest && event.target.closest('#controls')) {
+        return;
+    }
+
     if (touches.length === 0) {
         pointerActive = false;
     }
