@@ -29,7 +29,7 @@ let interactionMode = "magneticVortex";
 // --- AURORA ALPHA BALANCE (tuned for additive blend mode) ---
 const AURORA_INTENSITY = 2.5;      // overall brightness
 const BASE_ALPHA_SCALE = 9;         // per-line base alpha multiplier
-const GLOW_BOOST_SCALE = 4;         // cursor-proximity glow boost
+const GLOW_BOOST_SCALE = 3.5;         // cursor-proximity glow boost
 const COLLAPSE_ALPHA_SCALE = 1.5;   // periodic "collapse" pulse strength
 
 // --- MOBILE / DEVICE PROFILE ---
