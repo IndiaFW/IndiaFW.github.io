@@ -94,17 +94,129 @@
     body.is-touch .ui-toggle.panel-open {
       left: 240px; /* approx panel width — sits just past its right edge */
     }
+
+    /* Pre-content message — mobile only, shown briefly on a still-dark
+       screen before stars/aurora appear, then fades and stays out of the
+       way (pointer-events: none) so it never blocks the double-tap gesture
+       it's describing. */
+    .pre-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 90;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      color: rgba(233,238,255,0.75);
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.1s ease;
+      text-shadow: 0 0 12px rgba(120,200,255,0.35);
+    }
+    .pre-message.visible {
+      opacity: 1;
+    }
+
+    /* Visitor counter — small glass pill, top right, styled to sit
+       comfortably alongside the aurora rather than looking like a stats
+       widget bolted on. */
+    .visitor-counter {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(13,19,48,0.55);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      color: #E9EEFF;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      text-shadow: 0 0 8px rgba(120,200,255,0.45);
+      transition: opacity 0.3s ease;
+    }
+    .visitor-counter .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7CFFB2, #66C6FF);
+      box-shadow: 0 0 6px rgba(120,255,190,0.8);
+      flex-shrink: 0;
+    }
+    .visitor-counter .count-label {
+      opacity: 0.65;
+      font-size: 0.78rem;
+    }
+    .visitor-counter .count-value {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Immersive toggle — single small always-reachable control that hides
+       both the settings panel and the visitor counter for a clutter-free
+       view, and brings them back again. Deliberately subtle (low opacity
+       at rest) so it doesn't itself become clutter. */
+    .immersive-toggle {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      z-index: 120;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(13,19,48,0.5);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #E9EEFF;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .immersive-toggle:hover,
+    .immersive-toggle:active {
+      opacity: 1;
+    }
+
+    /* When immersive mode is active: hide the controls panel/tab and the
+       visitor counter via opacity/pointer-events only — deliberately not
+       touching `transform` here, since the mobile collapsed panel already
+       relies on transform and a second conflicting rule would override it
+       rather than combine with it. */
+    body.immersive #controlsWrapper,
+    body.immersive .visitor-counter {
+      opacity: 0;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
 
-  <div id="controlsWrapper">
+  <div class="pre-message" id="preMessage">Double tap to replay the message...</div>
+
+  <div class="visitor-counter no-canvas-capture" id="visitorCounter">
+    <span class="dot"></span>
+    <span class="count-label">visitors</span>
+    <span class="count-value" id="visitorCount">···</span>
+  </div>
+
+  <button class="immersive-toggle no-canvas-capture" id="immersiveToggle" aria-label="Hide interface" title="Hide interface">👁</button>
+
+  <div id="controlsWrapper" class="no-canvas-capture">
     <button id="uiToggle" class="ui-toggle" aria-label="Toggle controls">☰</button>
 
     <div class="ui" id="controls">
       <a href="../">← back</a><br>
       Move mouse! • <span id="replayHint">PRESS L TO REPLAY!</span><br>
-      <span style="opacity:0.7">Generative, FINGERING, noise-driven prototype</span>
+      <span style="opacity:0.7">Generative, BIRTHDAY, noise-driven prototype</span>
 
       <label>
         <input type="checkbox" id="raysCheckbox" checked>
@@ -175,6 +287,9 @@
       const panel             = document.getElementById('controls');
       const wrapper           = document.getElementById('controlsWrapper');
       const toggle            = document.getElementById('uiToggle');
+      const preMessage        = document.getElementById('preMessage');
+      const visitorCount      = document.getElementById('visitorCount');
+      const immersiveToggle   = document.getElementById('immersiveToggle');
 
       // Same touch-detection logic used in sketch.js (isTouchDevice) — kept
       // independent here since this runs before/alongside p5's setup().
@@ -197,13 +312,53 @@
           toggle.classList.toggle('panel-open', nowOpen);
           toggle.textContent = nowOpen ? '✕' : '☰';
         });
+
+        // --- Pre-content message (mobile only) ---
+        // Shown briefly on the still-dark screen before the intro's stars
+        // and aurora fade in, so first-time visitors know the double-tap
+        // gesture exists before they'd otherwise have any reason to try it.
+        requestAnimationFrame(() => preMessage.classList.add('visible'));
+        setTimeout(() => preMessage.classList.remove('visible'), 2400);
+      } else {
+        // Desktop never shows the touch-only pre-message.
+        preMessage.remove();
       }
 
-      // Stop p5 from swallowing events on the controls panel/toggle (mouse).
+      // --- Visitor counter ---
+      // Uses CountAPI (api.countapi.xyz), a free public hit-counter with no
+      // auth — the only realistic option for a purely static page with no
+      // backend of its own. It's a third-party service, not something we
+      // control: if it's ever down, the count just stops updating rather
+      // than resetting, and the badge falls back to a small dash instead of
+      // breaking the page. The key here should be unique enough that it
+      // won't collide with someone else's counter using the same service.
+      const COUNTAPI_NAMESPACE = 'auror-bbf-site-2026';
+      const COUNTAPI_KEY = 'visits';
+      fetch(`https://api.countapi.xyz/hit/${COUNTAPI_NAMESPACE}/${COUNTAPI_KEY}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          visitorCount.textContent = Number(data.value).toLocaleString();
+        })
+        .catch(() => {
+          visitorCount.textContent = '—';
+        });
+
+      // --- Immersive toggle ---
+      // One control, reachable at all times, that hides both the settings
+      // panel (and its mobile toggle tab) and the visitor counter together
+      // for an unobstructed view — tap again to bring everything back.
+      immersiveToggle.addEventListener('click', () => {
+        const nowImmersive = document.body.classList.toggle('immersive');
+        immersiveToggle.title = nowImmersive ? 'Show interface' : 'Hide interface';
+      });
+
+      // Stop p5 from swallowing mouse events on any overlay UI element.
       // Touch is handled separately inside sketch.js's touchStarted/Moved/
-      // Ended via an event.target.closest('#controlsWrapper') check.
-      wrapper.addEventListener('mousedown', e => e.stopPropagation());
-      wrapper.addEventListener('click',     e => e.stopPropagation());
+      // Ended via an event.target.closest('.no-canvas-capture') check.
+      document.querySelectorAll('.no-canvas-capture').forEach(el => {
+        el.addEventListener('mousedown', e => e.stopPropagation());
+        el.addEventListener('click',     e => e.stopPropagation());
+      });
 
       raysCheckbox.addEventListener('change', () => {
         raysEnabled = raysCheckbox.checked;

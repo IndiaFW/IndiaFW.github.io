@@ -196,7 +196,7 @@ function touchStarted(event) {
     // checkbox) behave like normal page UI — don't hijack them as canvas
     // pointer input, and don't preventDefault, or mobile browsers won't
     // open the native <select> dropdown.
-    if (event && event.target && event.target.closest && event.target.closest('#controlsWrapper')) {
+    if (event && event.target && event.target.closest && event.target.closest('.no-canvas-capture')) {
         return;
     }
 
@@ -217,7 +217,7 @@ function touchStarted(event) {
 }
 
 function touchMoved(event) {
-    if (event && event.target && event.target.closest && event.target.closest('#controlsWrapper')) {
+    if (event && event.target && event.target.closest && event.target.closest('.no-canvas-capture')) {
         return;
     }
 
@@ -230,7 +230,7 @@ function touchMoved(event) {
 }
 
 function touchEnded(event) {
-    if (event && event.target && event.target.closest && event.target.closest('#controlsWrapper')) {
+    if (event && event.target && event.target.closest && event.target.closest('.no-canvas-capture')) {
         return;
     }
 
