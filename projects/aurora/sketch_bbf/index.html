@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Aurora — BRING BACK FINGERING!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      margin: 0;
+      background: #070A12;
+      color: #E9EEFF;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .ui {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      background: rgba(13,19,48,0.7);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      z-index: 100;
+      pointer-events: auto;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .ui a {
+      color: #E9EEFF;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(233,238,255,0.3);
+    }
+    .ui label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ui .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .ui select {
+      background: rgba(13,19,48,0.9);
+      color: #E9EEFF;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .ui select:focus {
+      outline: 1px solid rgba(255,255,255,0.4);
+    }
+
+    /* Toggle tab — hidden on desktop (JS only shows it on touch devices).
+       Sits just to the right of where the panel's edge lands so it stays
+       reachable whether the panel is open or collapsed. */
+    .ui-toggle {
+      display: none;
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 110;
+      width: 38px;
+      height: 38px;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13,19,48,0.85);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      color: #E9EEFF;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: left 0.3s ease;
+    }
+
+    /* Only on touch devices (body.is-touch, set by JS below): the panel
+       becomes collapsible and starts closed so it doesn't cover the
+       aurora, and the toggle tab becomes visible. */
+    body.is-touch .ui-toggle {
+      display: flex;
+    }
+    body.is-touch .ui.collapsed {
+      transform: translateX(calc(-100% - 28px));
+      opacity: 0;
+      pointer-events: none;
+    }
+    body.is-touch .ui-toggle.panel-open {
+      left: 240px; /* approx panel width — sits just past its right edge */
+    }
+  </style>
+</head>
+<body>
+
+  <div id="controlsWrapper">
+    <button id="uiToggle" class="ui-toggle" aria-label="Toggle controls">☰</button>
+
+    <div class="ui" id="controls">
+      <a href="../">← back</a><br>
+      Move mouse! • <span id="replayHint">PRESS L TO REPLAY!</span><br>
+      <span style="opacity:0.7">Generative, BIRTHDAY, noise-driven prototype</span>
+
+      <label>
+        <input type="checkbox" id="raysCheckbox" checked>
+        Fine vertical rays
+      </label>
+
+      <div class="row">
+        <span>Palette</span>
+        <select id="paletteSelect">
+          <option value="classic">Classic</option>
+          <option value="violetStorm">Violet Storm</option>
+          <option value="arcticBlue">Arctic Blue</option>
+          <option value="solarFlare">Solar Flare</option>
+          <option value="deepSpace">Deep Space</option>
+          <option value="emeraldStorm">Emerald Storm</option>
+          <option value="neonNebula">Neon Nebula</option>
+          <option value="arcticIce">Arctic Ice</option>
+          <option value="deepAurora">Deep Aurora</option>
+          <option value="dreamLavender">Dream Lavender</option>
+          <option value="cottonCandy">Cotton Candy</option>
+          <option value="synthwave">Synthwave</option>
+          <option value="ionStorm">Ion Storm</option>
+          <option value="plasmaArc">Plasma Arc</option>
+          <option value="alienSky">Alien Sky</option>
+          <option value="supernova">Supernova</option>
+          <option value="gammaBurst">Gamma Burst</option>
+          <option value="auroraUltra">Aurora Ultra</option>
+          <option value="toxicIon">Toxic Ion</option>
+          <option value="cosmicFire">Cosmic Fire</option>
+          <option value="prismaticShock">Prismatic Shock</option>
+          <option value="acidRainbow">Acid Rainbow</option>
+          <option value="ultravioletStorm">Ultraviolet Storm</option>
+          <option value="toxicSunset">Toxic Sunset</option>
+          <option value="alienPlasma">Alien Plasma</option>
+          <option value="laserStorm">Laser Storm</option>
+          <option value="cosmicCandy">Cosmic Candy</option>
+          <option value="gammaFlux">Gamma Flux</option>
+          <option value="plasmaCircuit">Plasma Circuit</option>
+          <option value="nebulaChaos">Nebula Chaos</option>
+          <option value="highContrast">High Contrast</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <span>Cursor</span>
+        <select id="interactionSelect">
+          <option value="off">Off</option>
+          <option value="pushLift">Push Lift</option>
+          <option value="magneticVortex" selected>Magnetic Vortex</option>
+          <option value="attractor">Attractor</option>
+          <option value="shockwave">Shockwave</option>
+          <option value="ignition">Ignition</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="sketch_bbf.js?v=1"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const raysCheckbox      = document.getElementById('raysCheckbox');
+      const paletteSelect     = document.getElementById('paletteSelect');
+      const interactionSelect = document.getElementById('interactionSelect');
+      const replayHint        = document.getElementById('replayHint');
+      const panel             = document.getElementById('controls');
+      const wrapper           = document.getElementById('controlsWrapper');
+      const toggle            = document.getElementById('uiToggle');
+
+      // Same touch-detection logic used in sketch.js (isTouchDevice) — kept
+      // independent here since this runs before/alongside p5's setup().
+      const isTouch =
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia('(pointer: coarse)').matches;
+
+      replayHint.textContent = isTouch ? 'DOUBLE TAP TO REPLAY!' : 'PRESS L TO REPLAY!';
+
+      if (isTouch) {
+        document.body.classList.add('is-touch');
+        // Start collapsed on mobile so the panel doesn't cover the aurora
+        // the moment the page loads — tap the tab to bring it out.
+        panel.classList.add('collapsed');
+        toggle.textContent = '☰';
+
+        toggle.addEventListener('click', () => {
+          const nowOpen = panel.classList.toggle('collapsed') === false;
+          toggle.classList.toggle('panel-open', nowOpen);
+          toggle.textContent = nowOpen ? '✕' : '☰';
+        });
+      }
+
+      // Stop p5 from swallowing events on the controls panel/toggle (mouse).
+      // Touch is handled separately inside sketch.js's touchStarted/Moved/
+      // Ended via an event.target.closest('#controlsWrapper') check.
+      wrapper.addEventListener('mousedown', e => e.stopPropagation());
+      wrapper.addEventListener('click',     e => e.stopPropagation());
+
+      raysCheckbox.addEventListener('change', () => {
+        raysEnabled = raysCheckbox.checked;
+      });
+      paletteSelect.addEventListener('change', () => {
+        auroraPalette = paletteSelect.value;
+      });
+      interactionSelect.addEventListener('change', () => {
+        interactionMode = interactionSelect.value;
+      });
+    });
+  </script>
+</body>
+</html>
