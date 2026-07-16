@@ -44,7 +44,7 @@ const INTRO_AURORA_RISE_DURATION = 3200; // ms for aurora to fully fade/rise in
 let starIntroMult = 1;
 let auroraIntroMult = 1;
 
-// --- LETTER FORMATION ("BBF") ---
+// --- LETTER FORMATION ---
 // After the intro settles, the curtain columns temporarily snap toward a
 // pre-rendered text shape (built once via an offscreen canvas — see
 // buildLetterMask()), hold there, then dissolve back into normal flow.
@@ -207,7 +207,7 @@ function touchStarted(event) {
 
         const now = millis();
         if (now - lastTapMs < DOUBLE_TAP_WINDOW_MS) {
-            letterSequenceStartMs = now; // double-tap replays the "Bruno" formation
+            letterSequenceStartMs = now; // double-tap replays the letter formation
             lastTapMs = 0; // avoid a fast third tap immediately re-triggering
         } else {
             lastTapMs = now;
@@ -292,7 +292,7 @@ function keyPressed() {
         }
     }
     if (key === "l" || key === "L") {
-        letterSequenceStartMs = millis(); // replay the "Bruno" formation immediately
+        letterSequenceStartMs = millis(); // replay the letter formation immediately
     }
 }
 
@@ -564,35 +564,93 @@ function buildLetterMask(word) {
     let textSizePx = sizeBasis * (isMobileLayout ? 0.16 : 0.28);
     pg.textSize(textSizePx);
 
-    // Auto-fit safety net: if the word still overflows the canvas width at
-    // this size (can happen on very narrow phones even after the basis fix
-    // above), scale down further until it fits with a small margin.
-    const measuredWidth = pg.textWidth(word);
+    // On mobile, wrap the phrase onto multiple lines instead of forcing it
+    // onto one — the old approach (single line + shrink-to-fit) made long
+    // phrases like "Bring Back Fingering!" shrink to an illegibly thin
+    // squiggle on narrow screens. Desktop keeps a single line since it
+    // already has room.
     const maxWidth = width * 0.88;
-    if (measuredWidth > maxWidth) {
-        textSizePx *= maxWidth / measuredWidth;
+    const lines = isMobileLayout ? wrapTextToLines(pg, word, maxWidth) : [word];
+
+    // Auto-fit: if the longest line still overflows canvas width at this
+    // size (can happen on very narrow phones, or with a single very long
+    // word that can't be split), scale every line down together until it
+    // fits with a small margin.
+    let maxLineWidth = 0;
+    for (const ln of lines) maxLineWidth = Math.max(maxLineWidth, pg.textWidth(ln));
+    if (maxLineWidth > maxWidth) {
+        textSizePx *= maxWidth / maxLineWidth;
         pg.textSize(textSizePx);
     }
 
-    pg.text(word, width * 0.5, height * (isMobileLayout ? 0.34 : 0.38));
+    const lineHeight = textSizePx * 1.15;
+    const blockHeight = lineHeight * lines.length;
+    const centerY = height * (isMobileLayout ? 0.34 : 0.38);
+    const startY = centerY - blockHeight / 2 + lineHeight / 2;
+
+    for (let li = 0; li < lines.length; li++) {
+        pg.text(lines[li], width * 0.5, startY + li * lineHeight);
+    }
+
     pg.loadPixels();
 
+    // Build per-column bands rather than a single yMin/yMax span — with
+    // multiple text lines, one column can now pass through more than one
+    // line, and a single min/max would draw a solid bar filling the gap
+    // between them. A run of "lit" pixels ends a band once it hits a gap
+    // taller than a couple of sample steps (GAP_TOLERANCE).
+    const GAP_TOLERANCE = 6;
     const mask = [];
     for (let s = 0; s < LETTER_MASK_SAMPLES; s++) {
         const px = Math.min(width - 1, Math.floor((s / LETTER_MASK_SAMPLES) * width));
-        let yMin = null, yMax = null;
+        const bands = [];
+        let bandStart = null, lastOn = null;
         for (let py = 0; py < height; py += 2) {
             const idx = (py * width + px) * 4;
-            if (pg.pixels[idx] > 128) {
-                if (yMin === null) yMin = py;
-                yMax = py;
+            const on = pg.pixels[idx] > 128;
+            if (on) {
+                if (bandStart === null) bandStart = py;
+                lastOn = py;
+            } else if (bandStart !== null && py - lastOn > GAP_TOLERANCE) {
+                bands.push({ yMin: bandStart, yMax: Math.max(lastOn, bandStart + 8) });
+                bandStart = null;
             }
         }
-        mask.push(yMin === null ? null : { x: px, yMin, yMax: Math.max(yMax, yMin + 8) });
+        if (bandStart !== null) {
+            bands.push({ yMin: bandStart, yMax: Math.max(lastOn, bandStart + 8) });
+        }
+
+        if (bands.length === 0) {
+            mask.push(null);
+        } else {
+            const totalLength = bands.reduce((sum, b) => sum + (b.yMax - b.yMin), 0);
+            mask.push({ x: px, bands, totalLength });
+        }
     }
 
     pg.remove();
     return { samples: LETTER_MASK_SAMPLES, mask };
+}
+
+// Greedily packs words onto lines that fit within maxWidth, measured using
+// the graphics buffer's current font/size. A single word longer than
+// maxWidth on its own is still placed alone on a line (it'll be caught by
+// the auto-fit shrink step in buildLetterMask rather than being split).
+function wrapTextToLines(pg, phrase, maxWidth) {
+    const words = phrase.split(' ');
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+        const candidate = current ? current + ' ' + word : word;
+        if (pg.textWidth(candidate) > maxWidth && current) {
+            lines.push(current);
+            current = word;
+        } else {
+            current = candidate;
+        }
+    }
+    if (current) lines.push(current);
+    return lines;
 }
 
 // Cheap per-column lookup used inside drawCurtain — maps a curtain column's
@@ -718,6 +776,7 @@ function drawCurtain(z, wind, activity) {
         // — this keeps the normal running cost identical to before, since
         // letterFormMix sits at 0 the vast majority of the time.
         const letterCell = letterFormMix > 0.001 ? getLetterMaskCell(baseX) : null;
+        let prevBandIdx = -1; // tracks which text-line band this column's line was last in
 
         for (let y = 0; y < height; y += stepY) {
             const y01 = y / height;
@@ -807,18 +866,45 @@ function drawCurtain(z, wind, activity) {
 
             // --- Letter formation blend ---
             // When active, columns that fall within a letter's shape get
-            // pulled toward a straight target position spanning that
-            // letter's local vertical extent (yMin→yMax), so the whole
-            // column's line collapses into a solid stroke instead of
-            // wandering off with the organic motion. Columns in the gaps
-            // between letters are left to drift as normal but dimmed (see
-            // the alpha step below) so the word reads clearly against them.
+            // pulled toward a target position tracing that letter's stroke.
+            // A column can now have multiple disjoint bands (e.g. it passes
+            // through two different text lines) — y01 (0..1 across the full
+            // canvas) is mapped proportionally along the concatenated bands
+            // by total length, so rows distribute across both lines rather
+            // than all collapsing into one. letterBreak flags when this row
+            // landed in a different band than the previous row, so the
+            // connecting stroke doesn't bridge across the gap between lines.
             let finalX = x, finalY = yy;
+            let letterBreak = false;
             if (letterCell) {
+                const posAlong = y01 * letterCell.totalLength;
+                let cumulative = 0;
+                let bandIdx = letterCell.bands.length - 1;
+                let chosenBand = letterCell.bands[bandIdx];
+                let localT = 1;
+                for (let bi = 0; bi < letterCell.bands.length; bi++) {
+                    const b = letterCell.bands[bi];
+                    const bLen = b.yMax - b.yMin;
+                    if (posAlong <= cumulative + bLen) {
+                        chosenBand = b;
+                        bandIdx = bi;
+                        localT = bLen > 0 ? clamp01((posAlong - cumulative) / bLen) : 0;
+                        break;
+                    }
+                    cumulative += bLen;
+                }
+
                 const targetX = letterCell.x;
-                const targetY = lerp(letterCell.yMin, letterCell.yMax, y01) + z * 6;
+                const targetY = lerp(chosenBand.yMin, chosenBand.yMax, localT) + z * 6;
                 finalX = lerp(x, targetX, letterFormMix);
                 finalY = lerp(yy, targetY, letterFormMix);
+
+                if (prevBandIdx !== -1 && bandIdx !== prevBandIdx && letterFormMix > 0.5) {
+                    letterBreak = true;
+                }
+                prevBandIdx = bandIdx;
+            } else {
+                prevBandIdx = -1;
             }
 
             let wG = smooth01(noise(baseX*colourScaleX, y*colourScaleY+colourRise, colourTime+z*10));
@@ -861,7 +947,7 @@ function drawCurtain(z, wind, activity) {
                 (letterCell ? (1 + 1.2 * letterFormMix) : (1 - 0.85 * letterFormMix));
 
             stroke(col[0], col[1], col[2], a);
-            if (prevX !== null) line(prevX, prevY, finalX, finalY);
+            if (prevX !== null && !letterBreak) line(prevX, prevY, finalX, finalY);
             prevX = finalX; prevY = finalY;
         }
     }
