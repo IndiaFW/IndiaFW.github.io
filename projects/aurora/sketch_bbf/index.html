@@ -204,19 +204,20 @@
 
     /* Visitor counter — small glass pill, top right, styled to sit
        comfortably alongside the aurora rather than looking like a stats
-       widget bolted on. */
+       widget bolted on. Two stacked rows: raw page loads, and a rough
+       once-per-device-per-day visitor count. */
     .visitor-counter {
       position: fixed;
       top: 14px;
       right: 14px;
       z-index: 100;
       display: flex;
-      align-items: center;
-      gap: 8px;
+      flex-direction: column;
+      gap: 6px;
       background: rgba(13,19,48,0.55);
       border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 999px;
-      padding: 8px 14px;
+      border-radius: 16px;
+      padding: 9px 14px;
       font-size: 0.85rem;
       letter-spacing: 0.02em;
       color: #E9EEFF;
@@ -224,6 +225,11 @@
       -webkit-backdrop-filter: blur(6px);
       text-shadow: 0 0 8px rgba(120,200,255,0.45);
       transition: opacity 0.3s ease;
+    }
+    .counter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .visitor-counter .dot {
       width: 6px;
@@ -233,6 +239,14 @@
       box-shadow: 0 0 6px rgba(120,255,190,0.8);
       flex-shrink: 0;
     }
+    .visitor-counter .dot-daily {
+      background: linear-gradient(135deg, #C9A6FF, #FF9ECF);
+      box-shadow: 0 0 6px rgba(201,166,255,0.8);
+    }
+    .visitor-counter .dot-today {
+      background: linear-gradient(135deg, #FFD37A, #FF9E6B);
+      box-shadow: 0 0 6px rgba(255,211,122,0.8);
+    }
     .visitor-counter .count-label {
       opacity: 0.65;
       font-size: 0.78rem;
@@ -240,6 +254,7 @@
     .visitor-counter .count-value {
       font-weight: 600;
       font-variant-numeric: tabular-nums;
+      margin-left: auto;
     }
 
     /* Immersive toggle — single small always-reachable control that hides
@@ -295,9 +310,21 @@
   </div>
 
   <div class="visitor-counter no-canvas-capture" id="visitorCounter">
-    <span class="dot"></span>
-    <span class="count-label">visitors</span>
-    <span class="count-value" id="visitorCount">···</span>
+    <div class="counter-row">
+      <span class="dot"></span>
+      <span class="count-label">loads</span>
+      <span class="count-value" id="loadsCount">···</span>
+    </div>
+    <div class="counter-row">
+      <span class="dot dot-daily"></span>
+      <span class="count-label">visitors</span>
+      <span class="count-value" id="dailyCount">···</span>
+    </div>
+    <div class="counter-row">
+      <span class="dot dot-today"></span>
+      <span class="count-label">today</span>
+      <span class="count-value" id="todayCount">···</span>
+    </div>
   </div>
 
   <button class="immersive-toggle no-canvas-capture" id="immersiveToggle" aria-label="Hide interface" title="Hide interface">👁</button>
@@ -381,7 +408,6 @@
       const toggle            = document.getElementById('uiToggle');
       const preMessage        = document.getElementById('preMessage');
       const preMessageText    = document.getElementById('preMessageText');
-      const visitorCount      = document.getElementById('visitorCount');
       const immersiveToggle   = document.getElementById('immersiveToggle');
 
       // Same touch-detection logic used in sketch.js (isTouchDevice) — kept
@@ -420,25 +446,107 @@
       requestAnimationFrame(() => preMessage.classList.add('visible'));
       setTimeout(() => preMessage.classList.remove('visible'), 2400);
 
-      // --- Visitor counter ---
+      // --- Visitor counters ---
       // Uses CountAPI (countapi.mileshilliard.com) — a free, no-auth,
-      // actively-maintained hit-counter. Note: the original countapi.xyz
-      // this was previously wired to has been discontinued, which is why
-      // the counter wasn't updating; this is a community-run replacement
-      // with a compatible spirit but a slightly different API shape (a
-      // single unique key rather than namespace+key, and the count comes
-      // back as a string). It's still a third-party service outside our
-      // control: if it's ever down, the count just stops updating rather
-      // than resetting, and the badge falls back to a dash instead of
-      // breaking the page.
-      const COUNTAPI_KEY = 'aurora-fingering-site-2026-visits';
-      fetch(`https://countapi.mileshilliard.com/api/v1/hit/${COUNTAPI_KEY}`)
+      // actively-maintained hit-counter (the original countapi.xyz this was
+      // previously wired to has been discontinued). Still a third-party
+      // service outside our control: if it's ever down, a counter just
+      // stops updating rather than resetting, and falls back to a dash
+      // instead of breaking the page.
+      //
+      // Two separate counters:
+      // 1. "loads" — increments every single page load, no restrictions.
+      // 2. "visitors" — an all-time CUMULATIVE total, gated so each device
+      //    can only add +1 to it once per calendar day. The CountAPI value
+      //    itself never resets — it's a running lifetime sum of unique
+      //    device-days since the counter was created. It is NOT a "today
+      //    only" figure that clears out nightly; the once-per-day gate
+      //    exists purely to stop a single device's repeated same-day
+      //    reloads/visits from inflating the total, not to limit what the
+      //    number represents to the current day.
+      // 3. "today" — a genuine today-only count, achieved by using a
+      //    DATE-STAMPED key (e.g. ...-daily-2026-07-16) that changes every
+      //    calendar day. Since nothing ever increments yesterday's key
+      //    again once the date rolls over, whatever total sits under
+      //    today's key naturally represents "devices that visited today" —
+      //    no manual reset needed, the date change does that for free.
+      //    Gated by the exact same once-per-device-per-day flag as #2,
+      //    since it's the same underlying event (first visit today from
+      //    this device) driving both.
+      //    Since this is a static page with no backend/accounts, there's
+      //    no way to identify an actual person — the best a client-only
+      //    site can do is remember, via localStorage, that this browser
+      //    already counted itself today, and skip incrementing (just
+      //    re-fetch the current value instead) if so. Clearing browser
+      //    data or visiting from a different browser/device will count as
+      //    a new visit — that's an inherent limit of doing this without a
+      //    backend, not a bug.
+      const COUNTAPI_BASE = 'https://countapi.mileshilliard.com/api/v1';
+      const LOADS_KEY = 'aurora-fingering-site-2026-loads';
+      const DAILY_KEY = 'aurora-fingering-site-2026-daily';
+      const LAST_VISIT_STORAGE_KEY = 'aurora-fingering-last-visit-date';
+
+      fetch(`${COUNTAPI_BASE}/hit/${LOADS_KEY}`)
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
-          visitorCount.textContent = Number(data.value).toLocaleString();
+          document.getElementById('loadsCount').textContent = Number(data.value).toLocaleString();
         })
         .catch(() => {
-          visitorCount.textContent = '—';
+          document.getElementById('loadsCount').textContent = '—';
+        });
+
+      // Local calendar day (not UTC) — "once per day" should match the
+      // visitor's own sense of "today", not an arbitrary UTC cutoff.
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      let alreadyCountedToday = false;
+      try {
+        alreadyCountedToday = localStorage.getItem(LAST_VISIT_STORAGE_KEY) === todayString;
+      } catch (e) {
+        // localStorage unavailable (private browsing, etc.) — treat as a
+        // fresh visit each time rather than crashing.
+      }
+
+      const dailyUrl = alreadyCountedToday
+        ? `${COUNTAPI_BASE}/get/${DAILY_KEY}`   // already counted — just read the value, don't increment
+        : `${COUNTAPI_BASE}/hit/${DAILY_KEY}`;  // first visit today from this device — increment
+
+      fetch(dailyUrl)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          document.getElementById('dailyCount').textContent = Number(data.value).toLocaleString();
+          if (!alreadyCountedToday) {
+            try { localStorage.setItem(LAST_VISIT_STORAGE_KEY, todayString); } catch (e) { /* ignore */ }
+          }
+        })
+        .catch(() => {
+          document.getElementById('dailyCount').textContent = '—';
+        });
+
+      // Today-only counter: same increment condition as above, but hits a
+      // key stamped with today's date so the total naturally starts fresh
+      // each day rather than needing an explicit reset.
+      const TODAY_KEY = `${DAILY_KEY}-${todayString}`;
+      const todayUrl = alreadyCountedToday
+        ? `${COUNTAPI_BASE}/get/${TODAY_KEY}`
+        : `${COUNTAPI_BASE}/hit/${TODAY_KEY}`;
+
+      fetch(todayUrl)
+        .then(r => {
+          if (r.ok) return r.json();
+          // A "get" on a date key with zero visits so far today (e.g. the
+          // very first visitor of a brand new day, but somehow already
+          // flagged locally — shouldn't normally happen, but handle it
+          // gracefully) returns 404. Treat that as zero rather than error.
+          if (r.status === 404) return { value: '0' };
+          return Promise.reject();
+        })
+        .then(data => {
+          document.getElementById('todayCount').textContent = Number(data.value).toLocaleString();
+        })
+        .catch(() => {
+          document.getElementById('todayCount').textContent = '—';
         });
 
       // --- Immersive toggle ---
