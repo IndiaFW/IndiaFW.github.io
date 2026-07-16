@@ -418,19 +418,21 @@
       // it. Which icon shows (tap rings vs. glowing "L" key) is decided
       // purely by CSS off the body.is-touch class set above.
       requestAnimationFrame(() => preMessage.classList.add('visible'));
-      setTimeout(() => preMessage.classList.remove('visible'), 4000);
+      setTimeout(() => preMessage.classList.remove('visible'), 2400);
 
       // --- Visitor counter ---
-      // Uses CountAPI (api.countapi.xyz), a free public hit-counter with no
-      // auth — the only realistic option for a purely static page with no
-      // backend of its own. It's a third-party service, not something we
+      // Uses CountAPI (countapi.mileshilliard.com) — a free, no-auth,
+      // actively-maintained hit-counter. Note: the original countapi.xyz
+      // this was previously wired to has been discontinued, which is why
+      // the counter wasn't updating; this is a community-run replacement
+      // with a compatible spirit but a slightly different API shape (a
+      // single unique key rather than namespace+key, and the count comes
+      // back as a string). It's still a third-party service outside our
       // control: if it's ever down, the count just stops updating rather
-      // than resetting, and the badge falls back to a small dash instead of
-      // breaking the page. The key here should be unique enough that it
-      // won't collide with someone else's counter using the same service.
-      const COUNTAPI_NAMESPACE = 'aurora-fingering-site-2026';
-      const COUNTAPI_KEY = 'visits';
-      fetch(`https://api.countapi.xyz/hit/${COUNTAPI_NAMESPACE}/${COUNTAPI_KEY}`)
+      // than resetting, and the badge falls back to a dash instead of
+      // breaking the page.
+      const COUNTAPI_KEY = 'aurora-fingering-site-2026-visits';
+      fetch(`https://countapi.mileshilliard.com/api/v1/hit/${COUNTAPI_KEY}`)
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
           visitorCount.textContent = Number(data.value).toLocaleString();
