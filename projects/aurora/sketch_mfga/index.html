@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Aurora — BRING BACK FINGERING!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      margin: 0;
+      background: #070A12;
+      color: #E9EEFF;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .ui {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      background: rgba(13,19,48,0.7);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      z-index: 100;
+      pointer-events: auto;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .ui a {
+      color: #E9EEFF;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(233,238,255,0.3);
+    }
+    .ui label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ui .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .ui select {
+      background: rgba(13,19,48,0.9);
+      color: #E9EEFF;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .ui select:focus {
+      outline: 1px solid rgba(255,255,255,0.4);
+    }
+
+    /* Toggle tab — hidden on desktop (JS only shows it on touch devices).
+       Sits just to the right of where the panel's edge lands so it stays
+       reachable whether the panel is open or collapsed. */
+    .ui-toggle {
+      display: none;
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 110;
+      width: 38px;
+      height: 38px;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13,19,48,0.85);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      color: #E9EEFF;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: left 0.3s ease;
+    }
+
+    /* Only on touch devices (body.is-touch, set by JS below): the panel
+       becomes collapsible and starts closed so it doesn't cover the
+       aurora, and the toggle tab becomes visible. */
+    body.is-touch .ui-toggle {
+      display: flex;
+    }
+    body.is-touch .ui.collapsed {
+      transform: translateX(calc(-100% - 28px));
+      opacity: 0;
+      pointer-events: none;
+    }
+    body.is-touch .ui-toggle.panel-open {
+      left: 240px; /* approx panel width — sits just past its right edge */
+    }
+
+    /* Pre-content message — shown briefly on a still-dark screen before
+       stars/aurora appear, then fades and stays out of the way
+       (pointer-events: none) so it never blocks the gesture/key it's
+       describing. Two icon variants live side by side; body.is-touch
+       (set by JS below) decides which one is actually shown. */
+    .pre-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.3s ease;
+    }
+    .pre-message.visible {
+      opacity: 1;
+    }
+
+    /* Two expanding rings, offset in time, mimicking two taps landing in
+       the same spot — a small visual echo of the gesture itself rather
+       than just describing it in words. Touch devices only. */
+    .tap-icon {
+      display: none;
+      position: relative;
+      width: 44px;
+      height: 44px;
+    }
+    body.is-touch .tap-icon {
+      display: block;
+    }
+    .tap-icon .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid rgba(150,220,255,0.6);
+      animation: tapPulse 2.4s ease-out infinite;
+    }
+    .tap-icon .ring2 {
+      animation-delay: 1.2s;
+    }
+    .tap-icon .dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      margin: -3px;
+      border-radius: 50%;
+      background: rgba(200,235,255,0.9);
+      box-shadow: 0 0 10px rgba(150,220,255,0.8);
+    }
+    @keyframes tapPulse {
+      0%   { transform: scale(0.35); opacity: 0.9; }
+      70%  { opacity: 0.15; }
+      100% { transform: scale(1.2); opacity: 0; }
+    }
+
+    /* Glowing "L" keycap — desktop only, mirrors the tap-icon's role of
+       giving the gesture a visual presence rather than just naming it. */
+    .key-icon {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(150,220,255,0.55);
+      background: rgba(13,19,48,0.4);
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: rgba(212,236,255,0.92);
+      animation: keyGlow 3.4s ease-in-out infinite, keyPress 2.6s ease-in-out infinite;
+    }
+    body:not(.is-touch) .key-icon {
+      display: flex;
+    }
+    @keyframes keyGlow {
+      0%, 100% { box-shadow: 0 0 8px rgba(120,200,255,0.18) inset, 0 0 8px rgba(120,200,255,0.18); }
+      50%      { box-shadow: 0 0 16px rgba(150,210,255,0.4) inset, 0 0 16px rgba(150,210,255,0.4); }
+    }
+    @keyframes keyPress {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(2px); }
+    }
+
+    .tap-text {
+      font-size: 0.85rem;
+      font-weight: 300;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-align: center;
+      background: linear-gradient(90deg, #9CFFCB, #7FD6FF, #C9A6FF);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: tapTextGlow 3.4s ease-in-out infinite;
+    }
+    @keyframes tapTextGlow {
+      0%, 100% { filter: drop-shadow(0 0 5px rgba(140,210,255,0.25)); }
+      50%      { filter: drop-shadow(0 0 13px rgba(160,210,255,0.6)); }
+    }
+
+    /* Visitor counter — small glass pill, top right, styled to sit
+       comfortably alongside the aurora rather than looking like a stats
+       widget bolted on. Two stacked rows: raw page loads, and a rough
+       once-per-device-per-day visitor count. */
+    .visitor-counter {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: rgba(13,19,48,0.55);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 9px 14px;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      color: #E9EEFF;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      text-shadow: 0 0 8px rgba(120,200,255,0.45);
+      transition: opacity 0.3s ease;
+    }
+    .counter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .visitor-counter .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7CFFB2, #66C6FF);
+      box-shadow: 0 0 6px rgba(120,255,190,0.8);
+      flex-shrink: 0;
+    }
+    .visitor-counter .dot-daily {
+      background: linear-gradient(135deg, #C9A6FF, #FF9ECF);
+      box-shadow: 0 0 6px rgba(201,166,255,0.8);
+    }
+    .visitor-counter .dot-today {
+      background: linear-gradient(135deg, #FFD37A, #FF9E6B);
+      box-shadow: 0 0 6px rgba(255,211,122,0.8);
+    }
+    .visitor-counter .count-label {
+      opacity: 0.65;
+      font-size: 0.78rem;
+    }
+    .visitor-counter .count-value {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      margin-left: auto;
+    }
+
+    /* Immersive toggle — single small always-reachable control that hides
+       both the settings panel and the visitor counter for a clutter-free
+       view, and brings them back again. Deliberately subtle (low opacity
+       at rest) so it doesn't itself become clutter. */
+    .immersive-toggle {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      z-index: 120;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(13,19,48,0.5);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #E9EEFF;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .immersive-toggle:hover,
+    .immersive-toggle:active {
+      opacity: 1;
+    }
+
+    /* When immersive mode is active: hide the controls panel/tab and the
+       visitor counter via opacity/pointer-events only — deliberately not
+       touching `transform` here, since the mobile collapsed panel already
+       relies on transform and a second conflicting rule would override it
+       rather than combine with it. */
+    body.immersive #controlsWrapper,
+    body.immersive .visitor-counter {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="pre-message" id="preMessage">
+    <div class="tap-icon">
+      <span class="ring ring1"></span>
+      <span class="ring ring2"></span>
+      <span class="dot"></span>
+    </div>
+    <div class="key-icon">L</div>
+    <div class="tap-text" id="preMessageText">Double tap to replay the message</div>
+  </div>
+
+  <div class="visitor-counter no-canvas-capture" id="visitorCounter">
+    <div class="counter-row">
+      <span class="dot"></span>
+      <span class="count-label">loads</span>
+      <span class="count-value" id="loadsCount">···</span>
+    </div>
+    <div class="counter-row">
+      <span class="dot dot-daily"></span>
+      <span class="count-label">visitors</span>
+      <span class="count-value" id="dailyCount">···</span>
+    </div>
+    <div class="counter-row">
+      <span class="dot dot-today"></span>
+      <span class="count-label">today</span>
+      <span class="count-value" id="todayCount">···</span>
+    </div>
+  </div>
+
+  <button class="immersive-toggle no-canvas-capture" id="immersiveToggle" aria-label="Hide interface" title="Hide interface">👁</button>
+
+  <div id="controlsWrapper" class="no-canvas-capture">
+    <button id="uiToggle" class="ui-toggle" aria-label="Toggle controls">☰</button>
+
+    <div class="ui" id="controls">
+      <a href="../">← back</a><br>
+      Move mouse! • <span id="replayHint">PRESS L TO REPLAY!</span><br>
+      <span style="opacity:0.7">Generative, BIRTHDAY, noise-driven prototype</span>
+
+      <label>
+        <input type="checkbox" id="raysCheckbox" checked>
+        Fine vertical rays
+      </label>
+
+      <div class="row">
+        <span>Palette</span>
+        <select id="paletteSelect">
+          <option value="classic">Classic</option>
+          <option value="violetStorm">Violet Storm</option>
+          <option value="arcticBlue">Arctic Blue</option>
+          <option value="solarFlare">Solar Flare</option>
+          <option value="deepSpace">Deep Space</option>
+          <option value="emeraldStorm">Emerald Storm</option>
+          <option value="neonNebula">Neon Nebula</option>
+          <option value="arcticIce">Arctic Ice</option>
+          <option value="deepAurora">Deep Aurora</option>
+          <option value="dreamLavender">Dream Lavender</option>
+          <option value="cottonCandy">Cotton Candy</option>
+          <option value="synthwave">Synthwave</option>
+          <option value="ionStorm">Ion Storm</option>
+          <option value="plasmaArc">Plasma Arc</option>
+          <option value="alienSky">Alien Sky</option>
+          <option value="supernova">Supernova</option>
+          <option value="gammaBurst">Gamma Burst</option>
+          <option value="auroraUltra">Aurora Ultra</option>
+          <option value="toxicIon">Toxic Ion</option>
+          <option value="cosmicFire">Cosmic Fire</option>
+          <option value="prismaticShock">Prismatic Shock</option>
+          <option value="acidRainbow">Acid Rainbow</option>
+          <option value="ultravioletStorm">Ultraviolet Storm</option>
+          <option value="toxicSunset">Toxic Sunset</option>
+          <option value="alienPlasma">Alien Plasma</option>
+          <option value="laserStorm">Laser Storm</option>
+          <option value="cosmicCandy">Cosmic Candy</option>
+          <option value="gammaFlux">Gamma Flux</option>
+          <option value="plasmaCircuit">Plasma Circuit</option>
+          <option value="nebulaChaos">Nebula Chaos</option>
+          <option value="highContrast">High Contrast</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <span>Cursor</span>
+        <select id="interactionSelect">
+          <option value="off">Off</option>
+          <option value="pushLift">Push Lift</option>
+          <option value="magneticVortex" selected>Magnetic Vortex</option>
+          <option value="attractor">Attractor</option>
+          <option value="shockwave">Shockwave</option>
+          <option value="ignition">Ignition</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="sketch_mfga.js?v=1"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const raysCheckbox      = document.getElementById('raysCheckbox');
+      const paletteSelect     = document.getElementById('paletteSelect');
+      const interactionSelect = document.getElementById('interactionSelect');
+      const replayHint        = document.getElementById('replayHint');
+      const panel             = document.getElementById('controls');
+      const wrapper           = document.getElementById('controlsWrapper');
+      const toggle            = document.getElementById('uiToggle');
+      const preMessage        = document.getElementById('preMessage');
+      const preMessageText    = document.getElementById('preMessageText');
+      const immersiveToggle   = document.getElementById('immersiveToggle');
+
+      // Same touch-detection logic used in sketch.js (isTouchDevice) — kept
+      // independent here since this runs before/alongside p5's setup().
+      const isTouch =
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia('(pointer: coarse)').matches;
+
+      replayHint.textContent = isTouch ? 'DOUBLE TAP TO REPLAY!' : 'PRESS L TO REPLAY!';
+
+      if (isTouch) {
+        document.body.classList.add('is-touch');
+        // Start collapsed on mobile so the panel doesn't cover the aurora
+        // the moment the page loads — tap the tab to bring it out.
+        panel.classList.add('collapsed');
+        toggle.textContent = '☰';
+
+        toggle.addEventListener('click', () => {
+          const nowOpen = panel.classList.toggle('collapsed') === false;
+          toggle.classList.toggle('panel-open', nowOpen);
+          toggle.textContent = nowOpen ? '✕' : '☰';
+        });
+
+        preMessageText.textContent = 'Double tap to replay the message';
+      } else {
+        preMessageText.textContent = 'Press L to replay the message';
+      }
+
+      // --- Pre-content message ---
+      // Shown briefly on the still-dark screen before the intro's stars
+      // and aurora fade in, so first-time visitors know the replay
+      // gesture/key exists before they'd otherwise have any reason to try
+      // it. Which icon shows (tap rings vs. glowing "L" key) is decided
+      // purely by CSS off the body.is-touch class set above.
+      requestAnimationFrame(() => preMessage.classList.add('visible'));
+      setTimeout(() => preMessage.classList.remove('visible'), 2400);
+
+      // --- Visitor counters ---
+      // Uses CountAPI (countapi.mileshilliard.com) — a free, no-auth,
+      // actively-maintained hit-counter (the original countapi.xyz this was
+      // previously wired to has been discontinued). Still a third-party
+      // service outside our control: if it's ever down, a counter just
+      // stops updating rather than resetting, and falls back to a dash
+      // instead of breaking the page.
+      //
+      // Two separate counters:
+      // 1. "loads" — increments every single page load, no restrictions.
+      // 2. "visitors" — an all-time CUMULATIVE total, gated so each device
+      //    can only add +1 to it once per calendar day. The CountAPI value
+      //    itself never resets — it's a running lifetime sum of unique
+      //    device-days since the counter was created. It is NOT a "today
+      //    only" figure that clears out nightly; the once-per-day gate
+      //    exists purely to stop a single device's repeated same-day
+      //    reloads/visits from inflating the total, not to limit what the
+      //    number represents to the current day.
+      // 3. "today" — a genuine today-only count, achieved by using a
+      //    DATE-STAMPED key (e.g. ...-daily-2026-07-16) that changes every
+      //    calendar day. Since nothing ever increments yesterday's key
+      //    again once the date rolls over, whatever total sits under
+      //    today's key naturally represents "devices that visited today" —
+      //    no manual reset needed, the date change does that for free.
+      //    Gated by the exact same once-per-device-per-day flag as #2,
+      //    since it's the same underlying event (first visit today from
+      //    this device) driving both.
+      //    Since this is a static page with no backend/accounts, there's
+      //    no way to identify an actual person — the best a client-only
+      //    site can do is remember, via localStorage, that this browser
+      //    already counted itself today, and skip incrementing (just
+      //    re-fetch the current value instead) if so. Clearing browser
+      //    data or visiting from a different browser/device will count as
+      //    a new visit — that's an inherent limit of doing this without a
+      //    backend, not a bug.
+      const COUNTAPI_BASE = 'https://countapi.mileshilliard.com/api/v1';
+      const LOADS_KEY = 'aurora-fingering-site-2026-loads';
+      const DAILY_KEY = 'aurora-fingering-site-2026-daily';
+      const LAST_VISIT_STORAGE_KEY = 'aurora-fingering-last-visit-date';
+
+      fetch(`${COUNTAPI_BASE}/hit/${LOADS_KEY}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          document.getElementById('loadsCount').textContent = Number(data.value).toLocaleString();
+        })
+        .catch(() => {
+          document.getElementById('loadsCount').textContent = '—';
+        });
+
+      // Local calendar day (not UTC) — "once per day" should match the
+      // visitor's own sense of "today", not an arbitrary UTC cutoff.
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      let alreadyCountedToday = false;
+      try {
+        alreadyCountedToday = localStorage.getItem(LAST_VISIT_STORAGE_KEY) === todayString;
+      } catch (e) {
+        // localStorage unavailable (private browsing, etc.) — treat as a
+        // fresh visit each time rather than crashing.
+      }
+
+      const dailyUrl = alreadyCountedToday
+        ? `${COUNTAPI_BASE}/get/${DAILY_KEY}`   // already counted — just read the value, don't increment
+        : `${COUNTAPI_BASE}/hit/${DAILY_KEY}`;  // first visit today from this device — increment
+
+      fetch(dailyUrl)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          document.getElementById('dailyCount').textContent = Number(data.value).toLocaleString();
+          if (!alreadyCountedToday) {
+            try { localStorage.setItem(LAST_VISIT_STORAGE_KEY, todayString); } catch (e) { /* ignore */ }
+          }
+        })
+        .catch(() => {
+          document.getElementById('dailyCount').textContent = '—';
+        });
+
+      // Today-only counter: same increment condition as above, but hits a
+      // key stamped with today's date so the total naturally starts fresh
+      // each day rather than needing an explicit reset.
+      const TODAY_KEY = `${DAILY_KEY}-${todayString}`;
+      const todayUrl = alreadyCountedToday
+        ? `${COUNTAPI_BASE}/get/${TODAY_KEY}`
+        : `${COUNTAPI_BASE}/hit/${TODAY_KEY}`;
+
+      fetch(todayUrl)
+        .then(r => {
+          if (r.ok) return r.json();
+          // A "get" on a date key with zero visits so far today (e.g. the
+          // very first visitor of a brand new day, but somehow already
+          // flagged locally — shouldn't normally happen, but handle it
+          // gracefully) returns 404. Treat that as zero rather than error.
+          if (r.status === 404) return { value: '0' };
+          return Promise.reject();
+        })
+        .then(data => {
+          document.getElementById('todayCount').textContent = Number(data.value).toLocaleString();
+        })
+        .catch(() => {
+          document.getElementById('todayCount').textContent = '—';
+        });
+
+      // --- Immersive toggle ---
+      // One control, reachable at all times, that hides both the settings
+      // panel (and its mobile toggle tab) and the visitor counter together
+      // for an unobstructed view — tap again to bring everything back.
+      immersiveToggle.addEventListener('click', () => {
+        const nowImmersive = document.body.classList.toggle('immersive');
+        immersiveToggle.title = nowImmersive ? 'Show interface' : 'Hide interface';
+      });
+
+      // Stop p5 from swallowing mouse events on any overlay UI element.
+      // Touch is handled separately inside sketch.js's touchStarted/Moved/
+      // Ended via an event.target.closest('.no-canvas-capture') check.
+      document.querySelectorAll('.no-canvas-capture').forEach(el => {
+        el.addEventListener('mousedown', e => e.stopPropagation());
+        el.addEventListener('click',     e => e.stopPropagation());
+      });
+
+      raysCheckbox.addEventListener('change', () => {
+        raysEnabled = raysCheckbox.checked;
+      });
+      paletteSelect.addEventListener('change', () => {
+        auroraPalette = paletteSelect.value;
+      });
+      interactionSelect.addEventListener('change', () => {
+        interactionMode = interactionSelect.value;
+      });
+    });
+  </script>
+</body>
+</html>
